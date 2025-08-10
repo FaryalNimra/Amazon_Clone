@@ -1,20 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
+// Create Supabase client only if environment variables are available
+let supabase: any = null
+
+if (supabaseUrl && supabaseAnonKey) {
+  supabase = createClient(supabaseUrl, supabaseAnonKey)
+} else if (typeof window !== 'undefined') {
+  // Only log error in browser, not during build
   console.error('Missing Supabase environment variables:')
   console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing')
   console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Set' : 'Missing')
-  throw new Error('Missing required Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Export the client
+export { supabase }
 
 // Function to test Supabase email configuration
 export const testEmailConfiguration = async () => {
+  if (!supabase) {
+    return { success: false, error: 'Supabase not configured' }
+  }
+  
   try {
     // Test if we can access Supabase
     const { data, error } = await supabase.auth.getSession()
@@ -34,6 +43,10 @@ export const testEmailConfiguration = async () => {
 
 // Function to get user profile data from auth metadata
 export const getUserProfile = async (userId: string) => {
+  if (!supabase) {
+    return { data: null, role: null, error: 'Supabase not configured' }
+  }
+  
   try {
     const { data: { user }, error } = await supabase.auth.getUser()
     
@@ -75,6 +88,10 @@ export const updateUserProfile = async (
     businessAddress?: string
   }
 ) => {
+  if (!supabase) {
+    return { error: 'Supabase not configured' }
+  }
+  
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
