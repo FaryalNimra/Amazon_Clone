@@ -51,63 +51,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   useEffect(() => {
+    // Check if Supabase is initialized
+    if (!supabase) {
+      console.warn('Supabase not initialized, skipping auth setup')
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+        setLoading(false)
+      }
     }
 
     getInitialSession()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        setLoading(false)
+      async (event: string, session: any) => {
+        try {
+          setUser(session?.user ?? null)
+          setLoading(false)
 
-        // Handle auth state changes
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('User signed in:', session.user.email)
-          console.log('Email confirmed at:', session.user.email_confirmed_at)
-          console.log('Last sign in at:', session.user.last_sign_in_at)
-          console.log('User metadata:', session.user.user_metadata)
-          
-          // Close all modals first
-          closeSignInModal()
-          closeSellerSignInModal()
-          closeSellerSignUpModal()
-          
-          // Check if user is verified using last_sign_in_at
-          if (!session.user.last_sign_in_at) {
-            console.log('User email not verified, redirecting to email verification')
-            router.push('/email-verification')
-          } else {
-            console.log('User verified, checking role for redirect')
-            // Check user role from metadata and redirect accordingly
-            const userRole = session.user.user_metadata?.role || session.user.user_metadata?.user_type
+          // Handle auth state changes
+          if (event === 'SIGNED_IN' && session?.user) {
+            console.log('User signed in:', session.user.email)
+            console.log('Email confirmed at:', session.user.email_confirmed_at)
+            console.log('Last sign in at:', session.user.last_sign_in_at)
+            console.log('User metadata:', session.user.user_metadata)
             
-            if (userRole === 'seller') {
-              console.log('User is a seller, redirecting to seller dashboard')
-              router.push('/seller-dashboard')
+            // Close all modals first
+            closeSignInModal()
+            closeSellerSignInModal()
+            closeSellerSignUpModal()
+            
+            // Check if user is verified using last_sign_in_at
+            if (!session.user.last_sign_in_at) {
+              console.log('User email not verified, redirecting to email verification')
+              try {
+                router.push('/email-verification')
+              } catch (navError) {
+                console.error('Navigation error:', navError)
+              }
             } else {
-              console.log('User is a buyer, redirecting to home page')
-              // Buyer - go to home page
+              console.log('User verified, checking role for redirect')
+              // Check user role from metadata and redirect accordingly
+              const userRole = session.user.user_metadata?.role || session.user.user_metadata?.user_type
+              
+              if (userRole === 'seller') {
+                console.log('User is a seller, redirecting to seller dashboard')
+                try {
+                  router.push('/seller-dashboard')
+                } catch (navError) {
+                  console.error('Navigation error:', navError)
+                }
+              } else {
+                console.log('User is a buyer, redirecting to home page')
+                // Buyer - go to home page
+                try {
+                  router.push('/')
+                } catch (navError) {
+                  console.error('Navigation error:', navError)
+                }
+              }
+            }
+          } else if (event === 'SIGNED_OUT') {
+            console.log('User signed out, redirecting to home page')
+            try {
               router.push('/')
+            } catch (navError) {
+              console.error('Navigation error:', navError)
             }
           }
-        } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out, redirecting to home page')
-          router.push('/')
+        } catch (error) {
+          console.error('Error handling auth state change:', error)
+          setLoading(false)
         }
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, closeSignInModal, closeSellerSignInModal, closeSellerSignUpModal])
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Check if Supabase is initialized
+      if (!supabase) {
+        return { error: 'Authentication service not available' }
+      }
+
       // First check if user exists and their verification status
       const { data: { user }, error: userError } = await supabase.auth.signInWithPassword({
         email,
@@ -125,12 +163,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If we reach here, the user is verified and can sign in
       return { error: null }
     } catch (err) {
+      console.error('Sign in error:', err)
       return { error: 'An unexpected error occurred' }
     }
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
   }
 
   const value = {
