@@ -28,7 +28,7 @@ interface SellerData {
 }
 
 const SellerDashboard: React.FC = () => {
-  const { user, signOut } = useAuth()
+  const { user, sellerLogout, switchToBuyerMode } = useAuth()
   const { openSellerSignInModal } = useModal()
   const router = useRouter()
   const [sellerData, setSellerData] = useState<SellerData | null>(null)
@@ -52,8 +52,8 @@ const SellerDashboard: React.FC = () => {
       const userRole = user.user_metadata?.role || user.user_metadata?.user_type
       
       if (userRole !== 'seller') {
-        // User is not a seller, redirect to home
-        router.push('/')
+        // User is not a seller, redirect to home with message
+        router.push('/?message=You are currently signed in as a buyer. Please log out before registering or logging in as a seller.')
         return
       }
 
@@ -89,12 +89,11 @@ const SellerDashboard: React.FC = () => {
   }, [user, router, openSellerSignInModal])
 
   const handleLogout = async () => {
-    await signOut()
-    router.push('/')
+    await sellerLogout()
   }
 
   const handleSwitchToBuyer = () => {
-    router.push('/')
+    switchToBuyerMode()
   }
 
   const navigationItems = [

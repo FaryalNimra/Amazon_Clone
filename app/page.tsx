@@ -1,12 +1,87 @@
 'use client'
 
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ShoppingBag, Star, Truck, Shield, Smartphone, Shirt, Home as HomeIcon, BookOpen, Heart, Gamepad2, Car, Trophy, Clock, Tag } from 'lucide-react'
+import { ArrowRight, ShoppingBag, Star, Truck, Shield, Smartphone, Shirt, Home as HomeIcon, BookOpen, Heart, Gamepad2, Car, Trophy, Clock, Tag, ShoppingCart } from 'lucide-react'
 import TodaysDeals from '@/components/TodaysDeals'
+import { useAuth } from '@/contexts/AuthContext'
+import { useModal } from '@/contexts/ModalContext'
+import { useCart } from '@/contexts/CartContext'
 
 export default function Home() {
+  // Get message from URL query parameters
+  const [message, setMessage] = useState<string | null>(null)
+  const { user, getUserRole } = useAuth()
+  const { openSignInModal } = useModal()
+  const { addToCart, loading: cartLoading } = useCart()
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const messageParam = urlParams.get('message')
+      if (messageParam) {
+        setMessage(messageParam)
+        // Clear the message from URL after displaying
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+    }
+  }, [])
+
+  const handleAddToCart = async (product: any) => {
+    // Check if user is authenticated as a buyer
+    if (!user) {
+      // User not logged in, show sign-in modal
+      openSignInModal()
+      return
+    }
+
+    const userRole = getUserRole()
+    if (userRole !== 'buyer') {
+      // User is not a buyer (e.g., they're a seller), show sign-in modal for buyer
+      openSignInModal()
+      return
+    }
+
+    // User is authenticated as a buyer, proceed with add to cart
+    try {
+      // Transform product data to match Product interface
+      const productData = {
+        id: Math.floor(Math.random() * 10000), // Generate unique numeric ID
+        name: product.name,
+        description: `${product.name} - ${product.category}`,
+        price: product.price,
+        originalPrice: product.price,
+        image: product.image,
+        rating: product.rating,
+        reviewCount: product.reviewCount,
+        brand: product.category,
+        inStock: true,
+        discount: 0
+      }
+      
+      await addToCart(productData)
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white-bg">
+      {/* Message Display */}
+      {message && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-100 border border-yellow-400 text-yellow-800 px-6 py-3 rounded-lg shadow-lg max-w-md text-center">
+          <div className="flex items-center justify-between">
+            <span className="text-sm">{message}</span>
+            <button
+              onClick={() => setMessage(null)}
+              className="ml-4 text-yellow-600 hover:text-yellow-800 text-lg font-bold"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         {/* Background Image */}
@@ -382,14 +457,26 @@ export default function Home() {
                     </span>
                   </div>
                   
-                  {/* CTA Button */}
-                  <Link 
-                    href={`/product/${product.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    className="w-full bg-primary-red hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center"
-                  >
-                    Shop Now
-                    <ArrowRight className="ml-2 w-4 h-4" />
-                  </Link>
+                  {/* CTA Buttons */}
+                  <div className="space-y-3">
+                    <button 
+                      onClick={() => handleAddToCart(product)}
+                      disabled={cartLoading}
+                      className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center"
+                    >
+                      <ShoppingCart className="mr-2 w-4 h-4" />
+                      {cartLoading ? 'Adding...' : 
+                       !user || getUserRole() !== 'buyer' ? 'Sign In to Buy' : 'Add to Cart'}
+                    </button>
+                    
+                    <Link 
+                      href={`/product/${product.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-primary-text font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center border border-gray-300"
+                    >
+                      View Product
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

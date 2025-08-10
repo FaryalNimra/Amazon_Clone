@@ -11,6 +11,8 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  sellerLogout: () => Promise<void>
+  switchToBuyerMode: () => void
   getUserRole: () => string | null
   getUserInfo: () => any
 }
@@ -178,11 +180,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const sellerLogout = async () => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
+      // Redirect to buyer home page after seller logout
+      router.push('/')
+    } catch (error) {
+      console.error('Seller logout error:', error)
+    }
+  }
+
+  const switchToBuyerMode = () => {
+    // Clear user session and redirect to buyer home page
+    setUser(null)
+    router.push('/')
+  }
+
   const value = {
     user,
     loading,
     signIn,
     signOut,
+    sellerLogout,
+    switchToBuyerMode,
     getUserRole,
     getUserInfo,
   }

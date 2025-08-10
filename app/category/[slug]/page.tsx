@@ -20,10 +20,14 @@ import {
 import { useCart } from '@/contexts/CartContext'
 import { Product, supabase } from '@/lib/supabase'
 import { useCartNavigation } from '@/hooks/useCartNavigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { useModal } from '@/contexts/ModalContext'
 
 const CategoryPage = ({ params }: { params: { slug: string } }) => {
   const { addToCart, loading: cartLoading } = useCart()
   const { getCartUrl } = useCartNavigation()
+  const { user, getUserRole } = useAuth()
+  const { openSignInModal } = useModal()
   const [sortBy, setSortBy] = useState('popularity')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
@@ -309,6 +313,21 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   )
 
   const handleAddToCart = async (product: Product) => {
+    // Check if user is authenticated as a buyer
+    if (!user) {
+      // User not logged in, show sign-in modal
+      openSignInModal()
+      return
+    }
+
+    const userRole = getUserRole()
+    if (userRole !== 'buyer') {
+      // User is not a buyer (e.g., they're a seller), show sign-in modal for buyer
+      openSignInModal()
+      return
+    }
+
+    // User is authenticated as a buyer, proceed with add to cart
     await addToCart(product)
   }
 
@@ -568,7 +587,10 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                        className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white py-2 px-4 rounded-md transition-colors flex items-center justify-center space-x-2"
                      >
                        <ShoppingCart className="w-4 h-4" />
-                       <span>{cartLoading ? 'Adding...' : 'Add to Cart'}</span>
+                       <span>
+                         {cartLoading ? 'Adding...' : 
+                          !user || getUserRole() !== 'buyer' ? 'Sign In to Buy' : 'Add to Cart'}
+                       </span>
                      </button>
                   </div>
                 </div>

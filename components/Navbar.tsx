@@ -25,7 +25,7 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false)
   const { openSignUpModal, openSignInModal, openSellerSignInModal } = useModal()
   const { cartCount } = useCart()
-  const { user, getUserRole, getUserInfo } = useAuth()
+  const { user, getUserRole, getUserInfo, sellerLogout, switchToBuyerMode } = useAuth()
   const { getCartUrl } = useCartNavigation()
 
   const categories = [
@@ -90,7 +90,13 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut()
+      // Use sellerLogout if user is a seller, otherwise use regular signOut
+      const userRole = getUserRole()
+      if (userRole === 'seller') {
+        await sellerLogout()
+      } else {
+        await supabase.auth.signOut()
+      }
     } catch (error) {
       console.error('Error signing out:', error)
     }
@@ -111,7 +117,13 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
     
     // If user is logged in, navigate to appropriate mode
     if (mode === 'buyer') {
-      router.push('/')
+      // For sellers switching to buyer mode, clear session and redirect
+      const userRole = getUserRole()
+      if (userRole === 'seller') {
+        switchToBuyerMode()
+      } else {
+        router.push('/')
+      }
     } else if (mode === 'seller') {
       router.push('/seller-dashboard')
     }
@@ -265,13 +277,16 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
                       <User className="h-4 w-4" />
                       <span>As Buyer</span>
                     </button>
-                    <button
-                      onClick={() => handleModeSwitch('seller')}
-                      className="flex items-center space-x-3 w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <Store className="h-4 w-4" />
-                      <span>As Seller</span>
-                    </button>
+                    {/* Only show "As Seller" option if user is not logged in as a buyer */}
+                    {(!user || getUserRole() !== 'buyer') && (
+                      <button
+                        onClick={() => handleModeSwitch('seller')}
+                        className="flex items-center space-x-3 w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Store className="h-4 w-4" />
+                        <span>As Seller</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -325,16 +340,19 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
                       <User className="h-4 w-4" />
                       <span>As Buyer</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        handleModeSwitch('seller')
-                        setIsMobileMenuOpen(false)
-                      }}
-                      className="flex items-center space-x-2 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
-                    >
-                      <Store className="h-4 w-4" />
-                      <span>As Seller</span>
-                    </button>
+                    {/* Only show "As Seller" option if user is not logged in as a buyer */}
+                    {(!user || getUserRole() !== 'buyer') && (
+                      <button
+                        onClick={() => {
+                          handleModeSwitch('seller')
+                          setIsMobileMenuOpen(false)
+                        }}
+                        className="flex items-center space-x-3 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
+                      >
+                        <Store className="h-4 w-4" />
+                        <span>As Seller</span>
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -391,16 +409,19 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
                       <User className="h-4 w-4" />
                       <span>As Buyer</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        handleModeSwitch('seller')
-                        setIsMobileMenuOpen(false)
-                      }}
-                      className="flex items-center space-x-2 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
-                    >
-                      <Store className="h-4 w-4" />
-                      <span>As Seller</span>
-                    </button>
+                    {/* Only show "As Seller" option if user is not logged in as a buyer */}
+                    {(!user || getUserRole() !== 'buyer') && (
+                      <button
+                        onClick={() => {
+                          handleModeSwitch('seller')
+                          setIsMobileMenuOpen(false)
+                        }}
+                        className="flex items-center space-x-3 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
+                      >
+                        <Store className="h-4 w-4" />
+                        <span>As Seller</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </>

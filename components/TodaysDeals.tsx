@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { ShoppingCart, Clock, Tag } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useModal } from '@/contexts/ModalContext'
+import { useCart } from '@/contexts/CartContext'
 
 interface DealProduct {
   id: string
@@ -15,6 +18,9 @@ interface DealProduct {
 }
 
 const TodaysDeals: React.FC = () => {
+  const { user, getUserRole } = useAuth()
+  const { openSignInModal } = useModal()
+  const { addToCart, loading: cartLoading } = useCart()
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
     minutes: 0,
@@ -82,9 +88,42 @@ const TodaysDeals: React.FC = () => {
     return () => clearInterval(timer)
   }, [])
 
-  const handleAddToCart = (productId: string) => {
-    // Add to cart functionality would go here
-    console.log(`Added product ${productId} to cart`)
+  const handleAddToCart = async (deal: DealProduct) => {
+    // Check if user is authenticated as a buyer
+    if (!user) {
+      // User not logged in, show sign-in modal
+      openSignInModal()
+      return
+    }
+
+    const userRole = getUserRole()
+    if (userRole !== 'buyer') {
+      // User is not a buyer (e.g., they're a seller), show sign-in modal for buyer
+      openSignInModal()
+      return
+    }
+
+    // User is authenticated as a buyer, proceed with add to cart
+    try {
+      // Transform deal data to match Product interface
+      const productData = {
+        id: parseInt(deal.id) || Math.floor(Math.random() * 10000), // Convert to number or generate random
+        name: deal.name,
+        description: `${deal.name} - ${deal.category}`,
+        price: deal.discountedPrice,
+        originalPrice: deal.originalPrice,
+        image: deal.image,
+        rating: 4.5, // Default rating for deals
+        reviewCount: 100, // Default review count for deals
+        brand: deal.category,
+        inStock: true,
+        discount: deal.discountPercentage
+      }
+      
+      await addToCart(productData)
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+    }
   }
 
   return (
@@ -169,11 +208,13 @@ const TodaysDeals: React.FC = () => {
                 
                 {/* Add to Cart Button */}
                 <button 
-                  onClick={() => handleAddToCart(deal.id)}
-                  className="w-full bg-primary-red hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center"
+                  onClick={() => handleAddToCart(deal)}
+                  disabled={cartLoading}
+                  className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  Add to Cart
+                  {cartLoading ? 'Adding...' : 
+                   !user || getUserRole() !== 'buyer' ? 'Sign In to Buy' : 'Add to Cart'}
                 </button>
               </div>
             </div>
