@@ -27,11 +27,7 @@ interface SellerData {
   total_products: number
 }
 
-interface SellerDashboardProps {
-  children?: React.ReactNode
-}
-
-const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
+const SellerDashboard: React.FC = () => {
   const { user, signOut } = useAuth()
   const { openSellerSignInModal } = useModal()
   const router = useRouter()
@@ -364,6 +360,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   )
 }
 
-export default SellerDashboard
+export default function SellerDashboardPage() {
+  return <SellerDashboard />
+}
 
 

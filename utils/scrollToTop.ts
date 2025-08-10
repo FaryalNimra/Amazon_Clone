@@ -25,3 +25,5 @@ export const scrollToTopInstant = () => {
 export const scrollToTopSmooth = () => {
   scrollToTop('smooth')
 }
+
+
