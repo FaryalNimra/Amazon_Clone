@@ -122,7 +122,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
         }
 
         // Transform data to match Product interface
-        const transformedProducts = data?.map(product => ({
+        const transformedProducts = data?.map((product: any) => ({
           id: product.id,
           name: product.name,
           description: product.description,
