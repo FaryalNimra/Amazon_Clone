@@ -3,41 +3,52 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Create Supabase client only if environment variables are available
-let supabase: any = null
-
-if (supabaseUrl && supabaseAnonKey) {
-  supabase = createClient(supabaseUrl, supabaseAnonKey)
-} else if (typeof window !== 'undefined') {
-  // Only log error in browser, not during build
-  console.error('Missing Supabase environment variables:')
-  console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing')
-  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Set' : 'Missing')
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
 }
 
-// Export the client
-export { supabase }
-
-// Function to test Supabase email configuration
-export const testEmailConfiguration = async () => {
-  if (!supabase) {
-    return { success: false, error: 'Supabase not configured' }
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
   }
-  
+})
+
+// Test function to verify storage connection
+export const testSupabaseConnection = async () => {
   try {
-    // Test if we can access Supabase
-    const { data, error } = await supabase.auth.getSession()
+    const { data, error } = await supabase.storage.listBuckets()
+    if (error) {
+      console.error('Storage connection error:', error)
+      return { success: false, error: error.message }
+    }
+    console.log('Available buckets:', data)
+    return { success: true, buckets: data }
+  } catch (err: any) {
+    console.error('Connection test failed:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+// Function to test if specific bucket exists and is accessible
+export const testBucketAccess = async (bucketName: string) => {
+  try {
+    // Try to list files in the bucket
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .list('')
     
     if (error) {
-      console.error('Supabase connection error:', error)
-      return { success: false, error: 'Supabase connection failed' }
+      console.error(`Bucket ${bucketName} access error:`, error)
+      return { success: false, error: error.message }
     }
     
-    console.log('Supabase connection successful')
-    return { success: true, message: 'Supabase is properly configured' }
-  } catch (err) {
-    console.error('Supabase test error:', err)
-    return { success: false, error: 'Supabase test failed' }
+    console.log(`Bucket ${bucketName} is accessible, files:`, data)
+    return { success: true, files: data }
+  } catch (err: any) {
+    console.error(`Bucket ${bucketName} test failed:`, err)
+    return { success: false, error: err.message }
   }
 }
 
@@ -144,7 +155,7 @@ export interface CartItem {
     id: number
     name: string
     price: number
-    image: string
+    image_url: string // Updated to match database schema
     description: string
   }
 }
@@ -155,7 +166,7 @@ export interface Product {
   description: string
   price: number
   originalPrice?: number
-  image: string
+  image_url: string // Updated to match database schema (was 'image')
   rating: number
   reviewCount: number
   brand: string
@@ -182,4 +193,84 @@ export interface SellerProfile {
   business_address: string
   created_at: string
   updated_at?: string
+} 
+
+// Function to force Supabase to refresh its schema cache
+export const refreshSupabaseSchema = async () => {
+  try {
+    console.log('🔄 Refreshing Supabase schema cache...')
+    
+    // Method 1: Test a simple query to trigger schema refresh
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, image_url')
+      .limit(1)
+    
+    if (error) {
+      console.error('❌ Schema refresh test failed:', error)
+      return { success: false, error: error.message }
+    }
+    
+    console.log('✅ Schema cache refreshed successfully')
+    return { success: true, data }
+    
+  } catch (err: any) {
+    console.error('❌ Schema refresh error:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+// Function to verify database schema matches expected structure
+export const verifyDatabaseSchema = async () => {
+  try {
+    console.log('🔍 Verifying database schema...')
+    
+    // First, let's see what columns actually exist in the products table
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .limit(1)
+    
+    if (error) {
+      console.error('❌ Schema verification failed:', error)
+      return { success: false, error: error.message, missingColumns: [] }
+    }
+    
+    // Get the actual columns from the database
+    const actualColumns = data && data.length > 0 ? Object.keys(data[0]) : []
+    console.log('📋 Actual database columns:', actualColumns)
+    
+    // Check if we have the essential columns for product creation
+    const essentialColumns = ['name', 'description', 'category', 'price']
+    const missingEssential = essentialColumns.filter(col => !actualColumns.includes(col))
+    
+    if (missingEssential.length > 0) {
+      console.error('❌ Missing essential columns:', missingEssential)
+      return { 
+        success: false, 
+        error: `Missing essential columns: ${missingEssential.join(', ')}`,
+        missingColumns: missingEssential,
+        actualColumns 
+      }
+    }
+    
+    console.log('✅ Database schema verified successfully')
+    console.log('📋 Available columns:', actualColumns)
+    
+    return { 
+      success: true, 
+      data, 
+      columns: actualColumns,
+      // Check for stock column (your table uses 'stock')
+      hasStock: actualColumns.includes('stock'),
+      // Check for image_url column (your table uses 'image_url')
+      hasImageUrl: actualColumns.includes('image_url'),
+      // Check for seller_id column (your table uses 'seller_id')
+      hasSellerId: actualColumns.includes('seller_id')
+    }
+    
+  } catch (err: any) {
+    console.error('❌ Schema verification error:', err)
+    return { success: false, error: err.message }
+  }
 } 

@@ -4,16 +4,17 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, ShoppingBag, Star, Truck, Shield, Smartphone, Shirt, Home as HomeIcon, BookOpen, Heart, Gamepad2, Car, Trophy, Clock, Tag, ShoppingCart } from 'lucide-react'
 import TodaysDeals from '@/components/TodaysDeals'
+import AddToCartButton from '@/components/AddToCartButton'
 import { useAuth } from '@/contexts/AuthContext'
 import { useModal } from '@/contexts/ModalContext'
 import { useCart } from '@/contexts/CartContext'
+
 
 export default function Home() {
   // Get message from URL query parameters
   const [message, setMessage] = useState<string | null>(null)
   const { user, getUserRole } = useAuth()
   const { openSignInModal } = useModal()
-  const { addToCart, loading: cartLoading } = useCart()
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -27,43 +28,7 @@ export default function Home() {
     }
   }, [])
 
-  const handleAddToCart = async (product: any) => {
-    // Check if user is authenticated as a buyer
-    if (!user) {
-      // User not logged in, show sign-in modal
-      openSignInModal()
-      return
-    }
 
-    const userRole = getUserRole()
-    if (userRole !== 'buyer') {
-      // User is not a buyer (e.g., they're a seller), show sign-in modal for buyer
-      openSignInModal()
-      return
-    }
-
-    // User is authenticated as a buyer, proceed with add to cart
-    try {
-      // Transform product data to match Product interface
-      const productData = {
-        id: Math.floor(Math.random() * 10000), // Generate unique numeric ID
-        name: product.name,
-        description: `${product.name} - ${product.category}`,
-        price: product.price,
-        originalPrice: product.price,
-        image: product.image,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
-        brand: product.category,
-        inStock: true,
-        discount: 0
-      }
-      
-      await addToCart(productData)
-    } catch (error) {
-      console.error('Error adding to cart:', error)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-white-bg">
@@ -239,105 +204,101 @@ export default function Home() {
       {/* Today's Deals Section */}
       <TodaysDeals />
 
-             {/* Featured Categories Section */}
-       <section id="featured-categories" className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-primary-text mb-4">
-              Featured Categories
+      {/* Explore Electronics Section */}
+      <section id="featured-categories" className="py-24 relative overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div 
+          className="absolute inset-0 electronics-bg"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        ></div>
+        
+        {/* Dark Overlay for Better Text Readability */}
+        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+        
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-10 right-10 w-32 h-32 bg-primary-red rounded-full opacity-20"></div>
+          <div className="absolute bottom-20 left-16 w-24 h-24 bg-primary-red rounded-full opacity-20"></div>
+          <div className="absolute top-1/2 left-1/4 w-20 h-20 bg-blue-500 rounded-full opacity-20"></div>
+        </div>
+        
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left Side - Content */}
+            <div className="space-y-8">
+                          {/* Badge */}
+            <div className="inline-flex items-center px-4 py-2 bg-primary-red bg-opacity-90 text-white rounded-full text-sm font-semibold border border-red-400 border-opacity-30 backdrop-blur-sm">
+              <Star className="w-4 h-4 mr-2" />
+              Featured Category
+            </div>
+            
+            {/* Main Heading */}
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+              Explore
+              <span className="block text-primary-red bg-gradient-to-r from-primary-red to-red-400 bg-clip-text text-transparent">
+                Electronics
+              </span>
             </h2>
-            <p className="text-lg text-text-muted max-w-2xl mx-auto">
-              Explore our wide range of products across different categories
+            
+            {/* Description */}
+            <p className="text-lg md:text-xl text-gray-200 leading-relaxed max-w-lg">
+              Discover the latest gadgets, smart devices, and cutting-edge technology that will transform your digital lifestyle. From smartphones to smart home devices, we've curated the best electronics collection for every need and budget.
             </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { 
-                name: 'Electronics', 
-                icon: Smartphone, 
-                color: 'bg-blue-500',
-                gradient: 'from-blue-500 to-blue-600',
-                description: 'Latest gadgets and devices'
-              },
-              { 
-                name: 'Fashion', 
-                icon: Shirt, 
-                color: 'bg-pink-500',
-                gradient: 'from-pink-500 to-pink-600',
-                description: 'Trendy clothing and accessories'
-              },
-              { 
-                name: 'Home & Garden', 
-                icon: HomeIcon, 
-                color: 'bg-green-500',
-                gradient: 'from-green-500 to-green-600',
-                description: 'Everything for your home'
-              },
-              { 
-                name: 'Sports', 
-                icon: Trophy, 
-                color: 'bg-orange-500',
-                gradient: 'from-orange-500 to-orange-600',
-                description: 'Sports equipment and gear'
-              },
-              { 
-                name: 'Books', 
-                icon: BookOpen, 
-                color: 'bg-purple-500',
-                gradient: 'from-purple-500 to-purple-600',
-                description: 'Books for all interests'
-              },
-              { 
-                name: 'Beauty', 
-                icon: Heart, 
-                color: 'bg-red-500',
-                gradient: 'from-red-500 to-red-600',
-                description: 'Beauty and personal care'
-              },
-              { 
-                name: 'Toys', 
-                icon: Gamepad2, 
-                color: 'bg-yellow-500',
-                gradient: 'from-yellow-500 to-yellow-600',
-                description: 'Fun toys and games'
-              },
-              { 
-                name: 'Automotive', 
-                icon: Car, 
-                color: 'bg-gray-500',
-                gradient: 'from-gray-500 to-gray-600',
-                description: 'Auto parts and accessories'
-              }
-            ].map((category, index) => {
-              const IconComponent = category.icon
-              return (
+              
+              {/* CTA Button */}
+              <div className="pt-4">
                 <Link 
-                  key={index}
-                  href={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="group block"
+                  href="/category/electronics" 
+                  className="group inline-flex items-center bg-primary-red hover:bg-red-600 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-xl shadow-lg"
                 >
-                  <div className={`bg-gradient-to-br ${category.gradient} rounded-xl p-6 text-center text-white transition-all duration-300 transform hover:scale-105 hover:shadow-xl`}>
-                    <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                      <IconComponent className="w-8 h-8" />
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">{category.name}</h3>
-                    <p className="text-sm text-white text-opacity-80">{category.description}</p>
-                  </div>
+                  Start Exploring
+                  <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-              )
-            })}
-          </div>
-          
-          {/* View All Categories Button */}
-          <div className="text-center mt-12">
-            <Link 
-              href="/categories"
-              className="inline-flex items-center px-6 py-3 bg-primary-red hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-            >
-              View All Categories
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
+              </div>
+            </div>
+            
+            {/* Right Side - Electronics Icon */}
+            <div className="flex justify-center lg:justify-end">
+              <div className="relative">
+                {/* Main Icon Container with Glow Effect */}
+                <div className="w-48 h-48 bg-gradient-to-br from-primary-red to-red-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-red-500/50 transform hover:scale-105 transition-all duration-500 relative overflow-hidden">
+                  {/* Shimmer Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white via-opacity-20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 -translate-x-full hover:translate-x-full"></div>
+                  
+                  {/* Main Icon */}
+                  <div className="relative z-10">
+                    <Smartphone className="w-24 h-24 text-white drop-shadow-lg" />
+                  </div>
+                </div>
+                
+                {/* Floating Elements with Enhanced Effects */}
+                <div className="absolute -top-4 -right-4 w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-12 hover:scale-110 transition-all duration-300 animate-pulse">
+                  <BookOpen className="w-8 h-8 text-white" />
+                </div>
+                
+                <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg transform -rotate-12 hover:scale-110 transition-all duration-300 animate-bounce">
+                  <Gamepad2 className="w-10 h-10 text-white" />
+                </div>
+                
+                <div className="absolute top-1/2 -right-8 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-45 hover:scale-110 transition-all duration-300 animate-pulse">
+                  <Heart className="w-6 h-6 text-white" />
+                </div>
+                
+                {/* Additional Floating Tech Elements */}
+                <div className="absolute top-1/4 -left-4 w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg transform -rotate-12 hover:scale-110 transition-all duration-300">
+                  <Shield className="w-7 h-7 text-white" />
+                </div>
+                
+                <div className="absolute bottom-1/4 -right-2 w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-12 hover:scale-110 transition-all duration-300">
+                  <Truck className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -368,12 +329,12 @@ export default function Home() {
                 category: 'Electronics'
               },
               {
-                name: 'Premium Running Shoes',
-                image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                price: 79.99,
+                name: 'Gaming Laptop Pro',
+                image: 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+                price: 1299.99,
                 rating: 4.9,
                 reviewCount: 892,
-                category: 'Sports'
+                category: 'Electronics'
               },
               {
                 name: 'Smart Home Security Camera',
@@ -384,12 +345,12 @@ export default function Home() {
                 category: 'Electronics'
               },
               {
-                name: 'Organic Skincare Set',
-                image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                price: 44.99,
+                name: 'Wireless Earbuds Pro',
+                image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+                price: 199.99,
                 rating: 4.6,
                 reviewCount: 334,
-                category: 'Beauty'
+                category: 'Electronics'
               },
               {
                 name: 'Portable Bluetooth Speaker',
@@ -400,12 +361,12 @@ export default function Home() {
                 category: 'Electronics'
               },
               {
-                name: 'Designer Watch Collection',
-                image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-                price: 199.99,
+                name: 'Smartphone Ultra Max',
+                image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+                price: 899.99,
                 rating: 4.9,
                 reviewCount: 678,
-                category: 'Fashion'
+                category: 'Electronics'
               }
             ].map((product, index) => (
               <div key={index} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 overflow-hidden">
@@ -457,26 +418,21 @@ export default function Home() {
                     </span>
                   </div>
                   
-                  {/* CTA Buttons */}
-                  <div className="space-y-3">
-                    <button 
-                      onClick={() => handleAddToCart(product)}
-                      disabled={cartLoading}
-                      className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center"
-                    >
-                      <ShoppingCart className="mr-2 w-4 h-4" />
-                      {cartLoading ? 'Adding...' : 
-                       !user || getUserRole() !== 'buyer' ? 'Sign In to Buy' : 'Add to Cart'}
-                    </button>
-                    
-                    <Link 
-                      href={`/product/${product.name.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="w-full bg-gray-100 hover:bg-gray-200 text-primary-text font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center border border-gray-300"
-                    >
-                      View Product
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </Link>
-                  </div>
+                  {/* Add to Cart Button */}
+                  <AddToCartButton
+                    product={{
+                      id: Date.now() + Math.random(), // Generate unique ID
+                      name: product.name,
+                      description: `${product.name} - ${product.category}`,
+                      price: product.price,
+                      image_url: product.image,
+                      rating: product.rating,
+                      reviewCount: product.reviewCount,
+                      brand: product.category,
+                      inStock: true
+                    }}
+                    className="w-full"
+                  />
                 </div>
               </div>
             ))}
@@ -484,14 +440,14 @@ export default function Home() {
           
           {/* View All Products Button */}
           <div className="text-center mt-12">
-            <Link 
-              href="/products"
-              className="inline-flex items-center px-8 py-4 bg-primary-red hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg text-lg"
+            <Link
+              href="/category/electronics"
+              className="inline-flex items-center bg-primary-red hover:bg-red-600 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
             >
               View All Products
               <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
-                     </div>
+          </div>
          </div>
        </section>
      </div>

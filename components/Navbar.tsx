@@ -15,6 +15,14 @@ interface NavbarProps {
   isDarkMode: boolean
 }
 
+interface Product {
+  id: number
+  name: string
+  price: number
+  image_url: string
+  category: string
+}
+
 const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
   const router = useRouter()
   const [isScrolled, setIsScrolled] = useState(false)
@@ -23,6 +31,9 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false)
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const { openSignUpModal, openSignInModal, openSellerSignInModal } = useModal()
   const { cartCount } = useCart()
   const { user, getUserRole, getUserInfo, sellerLogout, switchToBuyerMode } = useAuth()
@@ -30,15 +41,15 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
 
   const categories = [
     'All',
-    'Electronics',
-    'Books',
-    'Clothing',
-    'Home & Garden',
-    'Sports',
-    'Toys',
-    'Automotive',
-    'Health',
-    'Beauty'
+    'Smartphones',
+    'Laptops',
+    'Tablets',
+    'Headphones',
+    'Cameras',
+    'Gaming',
+    'Smart Home',
+    'Wearables',
+    'Accessories'
   ]
 
   useEffect(() => {
@@ -49,6 +60,67 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Search products function
+  const searchProducts = async (query: string, category: string = 'All') => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      let queryBuilder = supabase
+        .from('products')
+        .select('id, name, price, image_url, category')
+        .ilike('name', `%${query}%`)
+        .limit(8)
+
+      if (category !== 'All') {
+        queryBuilder = queryBuilder.eq('category', category)
+      }
+
+      const { data, error } = await queryBuilder
+
+      if (error) {
+        console.error('Search error:', error)
+        setSearchResults([])
+      } else {
+        setSearchResults(data || [])
+      }
+    } catch (error) {
+      console.error('Search error:', error)
+      setSearchResults([])
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  // Handle search input changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchProducts(searchQuery, selectedCategory)
+      } else {
+        setSearchResults([])
+      }
+    }, 300)
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery, selectedCategory])
+
+  // Handle search input changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchProducts(searchQuery, selectedCategory)
+      } else {
+        setSearchResults([])
+      }
+    }, 300)
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery, selectedCategory])
 
   // Get user display name from auth metadata
   const getUserDisplayName = () => {
@@ -78,14 +150,35 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle search functionality
-    console.log('Searching for:', searchQuery)
+    if (searchQuery.trim()) {
+      // Navigate to Electronics category page with search query
+      router.push(`/category/electronics?search=${encodeURIComponent(searchQuery)}`)
+      setSearchQuery('')
+      setSearchResults([])
+    }
   }
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category)
-    // Handle category filtering
-    console.log('Selected category:', category)
+    setIsCategoryDropdownOpen(false)
+    
+    // Route to Electronics category page when category is selected
+    if (category !== 'All') {
+      router.push(`/category/electronics?category=${encodeURIComponent(category)}`)
+    } else {
+      router.push('/category/electronics')
+    }
+    
+    // Also update search if there's a query
+    if (searchQuery.trim()) {
+      searchProducts(searchQuery, category)
+    }
+  }
+
+  const handleProductClick = (productId: number) => {
+    router.push(`/category/electronics?product=${productId}`)
+    setSearchQuery('')
+    setSearchResults([])
   }
 
   const handleSignOut = async () => {
@@ -150,7 +243,7 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
           </div>
 
           {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+          <div className="hidden md:flex flex-1 max-w-lg mx-8">
             <div className="relative w-full">
               <form onSubmit={handleSearch} className="flex">
                 <div className="relative flex-1">
@@ -159,8 +252,8 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
-                    onBlur={() => setIsSearchFocused(false)}
-                    placeholder="Search products..."
+                    onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                    placeholder="Search iPhones, laptops, headphones..."
                     className="w-full pl-4 pr-12 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                   />
                   <button
@@ -170,21 +263,85 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
                     <Search className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="relative">
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="px-4 py-2 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                
+                {/* Categories Dropdown */}
+                <div className="relative ml-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700 min-w-[120px] flex items-center justify-between"
                   >
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <span className="truncate">{selectedCategory}</span>
+                    <ChevronDown className="h-4 w-4 text-gray-400 ml-2" />
+                  </button>
+                  
+                  {/* Categories Dropdown Menu */}
+                  {isCategoryDropdownOpen && (
+                    <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 max-h-60 overflow-y-auto">
+                      {categories.map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => handleCategoryChange(category)}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          {category}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </form>
+
+              {/* Search Results Dropdown */}
+              {isSearchFocused && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto z-50">
+                  {isSearching ? (
+                    <div className="p-4 text-center text-gray-500">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-red mx-auto"></div>
+                      <p className="mt-2">Searching...</p>
+                    </div>
+                  ) : (
+                    <>
+                      {searchResults.map((product) => (
+                        <button
+                          key={product.id}
+                          onClick={() => handleProductClick(product.id)}
+                          className="w-full p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-12 h-12 object-cover rounded-lg"
+                            />
+                            <div className="flex-1 text-left">
+                              <p className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2">
+                                {product.name}
+                              </p>
+                              <p className="text-primary-red font-semibold text-sm">
+                                ${product.price}
+                              </p>
+                              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                                {product.category}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {searchResults.length > 0 && (
+                        <div className="p-3 border-t border-gray-100 dark:border-gray-600">
+                          <button
+                            onClick={handleSearch}
+                            className="w-full text-center text-primary-red hover:text-red-600 font-medium text-sm"
+                          >
+                            View all results for "{searchQuery}"
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -309,11 +466,36 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
           <div className="px-2 pt-2 pb-3 space-y-1">
             {/* Mobile Search */}
             <div className="px-3 py-2">
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-red dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                />
+                <button
+                  onClick={handleSearch}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Mobile Categories */}
+              <div className="mt-2">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-red dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                >
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Mobile menu content based on mode */}

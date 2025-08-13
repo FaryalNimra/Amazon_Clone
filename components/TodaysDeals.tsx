@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { ShoppingCart, Clock, Tag } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useModal } from '@/contexts/ModalContext'
-import { useCart } from '@/contexts/CartContext'
+import { Clock, Tag, ArrowRight } from 'lucide-react'
+import AddToCartButton from './AddToCartButton'
+import Link from 'next/link'
 
 interface DealProduct {
   id: string
@@ -18,9 +17,6 @@ interface DealProduct {
 }
 
 const TodaysDeals: React.FC = () => {
-  const { user, getUserRole } = useAuth()
-  const { openSignInModal } = useModal()
-  const { addToCart, loading: cartLoading } = useCart()
   const [timeLeft, setTimeLeft] = useState({
     hours: 0,
     minutes: 0,
@@ -50,13 +46,13 @@ const TodaysDeals: React.FC = () => {
     },
     {
       id: '3',
-      name: 'Organic Cotton T-Shirt Collection',
-      image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      originalPrice: 89.99,
-      discountedPrice: 44.99,
-      discountPercentage: 50,
+      name: '4K Ultra HD Smart TV',
+      image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
+      originalPrice: 899.99,
+      discountedPrice: 599.99,
+      discountPercentage: 33,
       endTime: new Date(Date.now() + 12 * 60 * 60 * 1000), // 12 hours from now
-      category: 'Fashion'
+      category: 'Electronics'
     },
     {
       id: '4',
@@ -88,43 +84,7 @@ const TodaysDeals: React.FC = () => {
     return () => clearInterval(timer)
   }, [])
 
-  const handleAddToCart = async (deal: DealProduct) => {
-    // Check if user is authenticated as a buyer
-    if (!user) {
-      // User not logged in, show sign-in modal
-      openSignInModal()
-      return
-    }
 
-    const userRole = getUserRole()
-    if (userRole !== 'buyer') {
-      // User is not a buyer (e.g., they're a seller), show sign-in modal for buyer
-      openSignInModal()
-      return
-    }
-
-    // User is authenticated as a buyer, proceed with add to cart
-    try {
-      // Transform deal data to match Product interface
-      const productData = {
-        id: parseInt(deal.id) || Math.floor(Math.random() * 10000), // Convert to number or generate random
-        name: deal.name,
-        description: `${deal.name} - ${deal.category}`,
-        price: deal.discountedPrice,
-        originalPrice: deal.originalPrice,
-        image: deal.image,
-        rating: 4.5, // Default rating for deals
-        reviewCount: 100, // Default review count for deals
-        brand: deal.category,
-        inStock: true,
-        discount: deal.discountPercentage
-      }
-      
-      await addToCart(productData)
-    } catch (error) {
-      console.error('Error adding to cart:', error)
-    }
-  }
 
   return (
     <section className="py-16 bg-gradient-to-br from-red-50 to-orange-50">
@@ -207,15 +167,23 @@ const TodaysDeals: React.FC = () => {
                 </div>
                 
                 {/* Add to Cart Button */}
-                <button 
-                  onClick={() => handleAddToCart(deal)}
-                  disabled={cartLoading}
-                  className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 inline-flex items-center justify-center"
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  {cartLoading ? 'Adding...' : 
-                   !user || getUserRole() !== 'buyer' ? 'Sign In to Buy' : 'Add to Cart'}
-                </button>
+                <AddToCartButton
+                  product={{
+                    id: parseInt(deal.id),
+                    name: deal.name,
+                    description: `${deal.name} - ${deal.category}`,
+                    price: deal.discountedPrice,
+                    originalPrice: deal.originalPrice,
+                    image_url: deal.image,
+                    rating: 4.5,
+                    reviewCount: 0,
+                    brand: deal.category,
+                    inStock: true,
+                    discount: deal.discountPercentage
+                  }}
+                  className="w-full"
+                  disabled={false}
+                />
               </div>
             </div>
           ))}
@@ -223,10 +191,13 @@ const TodaysDeals: React.FC = () => {
 
         {/* View All Deals Button */}
         <div className="text-center mt-12">
-          <button className="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-primary-red font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg text-lg border-2 border-primary-red">
+          <Link
+            href="/category/electronics"
+            className="inline-flex items-center bg-primary-red hover:bg-red-600 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+          >
             View All Deals
-            <Tag className="ml-2 w-5 h-5" />
-          </button>
+            <ArrowRight className="ml-2 w-5 h-5" />
+          </Link>
         </div>
       </div>
     </section>

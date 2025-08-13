@@ -20,18 +20,14 @@ import {
 import { useCart } from '@/contexts/CartContext'
 import { Product, supabase } from '@/lib/supabase'
 import { useCartNavigation } from '@/hooks/useCartNavigation'
-import { useAuth } from '@/contexts/AuthContext'
-import { useModal } from '@/contexts/ModalContext'
 
 const CategoryPage = ({ params }: { params: { slug: string } }) => {
   const { addToCart, loading: cartLoading } = useCart()
   const { getCartUrl } = useCartNavigation()
-  const { user, getUserRole } = useAuth()
-  const { openSignInModal } = useModal()
   const [sortBy, setSortBy] = useState('popularity')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [priceRange, setPriceRange] = useState([0, 1000])
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(12)
@@ -106,6 +102,8 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        console.log('Fetching products for category:', categoryName, 'slug:', params.slug)
+        
         let query = supabase
           .from('products')
           .select('*')
@@ -122,8 +120,11 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
 
         if (error) {
           console.error('Error fetching products:', error)
+          setLoading(false)
           return
         }
+
+        console.log('Raw products data:', data)
 
         // Transform data to match Product interface
         const transformedProducts = data?.map((product: any) => ({
@@ -132,15 +133,21 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
           description: product.description,
           price: product.price,
           originalPrice: product.original_price,
-          image: product.image,
-          rating: product.rating,
-          reviewCount: product.review_count,
-          brand: product.brand,
-          inStock: product.in_stock,
-          discount: product.discount
+          image_url: product.image_url || product.image, // Handle both column names
+          rating: product.rating || 4.0,
+          reviewCount: product.review_count || 0,
+          brand: product.brand || 'Unknown',
+          inStock: product.in_stock !== false, // Default to true if not specified
+          discount: product.discount || 0
         })) || []
 
+        console.log('Transformed products:', transformedProducts)
         setProducts(transformedProducts)
+        
+        // If no products found, still set loading to false
+        if (!data || data.length === 0) {
+          console.log('No products found for category:', categoryName)
+        }
       } catch (error) {
         console.error('Error fetching products:', error)
       } finally {
@@ -148,7 +155,15 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
       }
     }
 
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log('Loading timeout reached, setting loading to false')
+      setLoading(false)
+    }, 10000) // 10 seconds timeout
+
     fetchProducts()
+
+    return () => clearTimeout(timeoutId)
   }, [categoryName, params.slug])
 
   // Get brands based on category
@@ -177,65 +192,106 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
 
   const brands = getBrands(params.slug)
 
-  // Get related categories based on current category
-  const getRelatedCategories = (currentSlug: string) => {
-    const categoryMap: { [key: string]: Array<{ name: string; icon: string; slug: string }> } = {
+  // Get category filters for Electronics
+  const getCategoryFilters = (categorySlug: string) => {
+    const categoryFilters: { [key: string]: Array<{ name: string }> } = {
       'electronics': [
-        { name: 'Mobile Phones', icon: '📱', slug: 'mobile-phones' },
-        { name: 'Gaming', icon: '🎮', slug: 'gaming' },
-        { name: 'Accessories', icon: '🎧', slug: 'accessories' },
-        { name: 'Home Appliances', icon: '🏠', slug: 'home-appliances' }
-      ],
-      'fashion': [
-        { name: 'Men\'s Clothing', icon: '👔', slug: 'mens-clothing' },
-        { name: 'Women\'s Clothing', icon: '👗', slug: 'womens-clothing' },
-        { name: 'Kids\' Fashion', icon: '👶', slug: 'kids-fashion' },
-        { name: 'Shoes', icon: '👠', slug: 'shoes' },
-        { name: 'Bags', icon: '🛍️', slug: 'bags' }
+        { name: 'Smartphones' },
+        { name: 'Laptops' },
+        { name: 'Tablets' },
+        { name: 'Gaming' },
+        { name: 'Audio' },
+        { name: 'Cameras' },
+        { name: 'Smart Home' },
+        { name: 'Wearables' },
+        { name: 'Accessories' }
       ],
       'mobile-phones': [
-        { name: 'Electronics', icon: '🔌', slug: 'electronics' },
-        { name: 'Gaming', icon: '🎮', slug: 'gaming' },
-        { name: 'Accessories', icon: '🎧', slug: 'accessories' }
+        { name: 'iPhone' },
+        { name: 'Samsung' },
+        { name: 'Google' },
+        { name: 'OnePlus' },
+        { name: 'Xiaomi' },
+        { name: 'Motorola' }
       ],
       'gaming': [
-        { name: 'Electronics', icon: '🔌', slug: 'electronics' },
-        { name: 'Mobile Phones', icon: '📱', slug: 'mobile-phones' },
-        { name: 'Accessories', icon: '🎧', slug: 'accessories' }
-      ],
-      'accessories': [
-        { name: 'Electronics', icon: '🔌', slug: 'electronics' },
-        { name: 'Mobile Phones', icon: '📱', slug: 'mobile-phones' },
-        { name: 'Gaming', icon: '🎮', slug: 'gaming' }
+        { name: 'PlayStation' },
+        { name: 'Xbox' },
+        { name: 'Nintendo' },
+        { name: 'PC Gaming' },
+        { name: 'Accessories' }
       ],
       'home-appliances': [
-        { name: 'Electronics', icon: '🔌', slug: 'electronics' },
-        { name: 'Accessories', icon: '🎧', slug: 'accessories' }
+        { name: 'Kitchen' },
+        { name: 'Cleaning' },
+        { name: 'Laundry' },
+        { name: 'Climate' },
+        { name: 'Smart Home' }
+      ]
+    }
+    
+    return categoryFilters[categorySlug] || categoryFilters['electronics']
+  }
+
+  // Get related categories based on current category
+  const getRelatedCategories = (currentSlug: string) => {
+    const categoryMap: { [key: string]: Array<{ name: string; slug: string }> } = {
+      'electronics': [
+        { name: 'Mobile Phones', slug: 'mobile-phones' },
+        { name: 'Gaming', slug: 'gaming' },
+        { name: 'Accessories', slug: 'accessories' },
+        { name: 'Home Appliances', slug: 'home-appliances' }
+      ],
+      'fashion': [
+        { name: 'Men\'s Clothing', slug: 'mens-clothing' },
+        { name: 'Women\'s Clothing', slug: 'womens-clothing' },
+        { name: 'Kids\' Fashion', slug: 'kids-fashion' },
+        { name: 'Shoes', slug: 'shoes' },
+        { name: 'Bags', slug: 'bags' }
+      ],
+      'mobile-phones': [
+        { name: 'Electronics', slug: 'electronics' },
+        { name: 'Gaming', slug: 'gaming' },
+        { name: 'Accessories', slug: 'accessories' }
+      ],
+      'gaming': [
+        { name: 'Electronics', slug: 'electronics' },
+        { name: 'Mobile Phones', slug: 'mobile-phones' },
+        { name: 'Accessories', slug: 'accessories' }
+      ],
+      'accessories': [
+        { name: 'Electronics', slug: 'electronics' },
+        { name: 'Mobile Phones', slug: 'mobile-phones' },
+        { name: 'Gaming', slug: 'gaming' }
+      ],
+      'home-appliances': [
+        { name: 'Electronics', slug: 'electronics' },
+        { name: 'Accessories', slug: 'accessories' }
       ],
       'mens-clothing': [
-        { name: 'Fashion', icon: '👗', slug: 'fashion' },
-        { name: 'Women\'s Clothing', icon: '👗', slug: 'womens-clothing' },
-        { name: 'Shoes', icon: '👠', slug: 'shoes' }
+        { name: 'Fashion', slug: 'fashion' },
+        { name: 'Women\'s Clothing', slug: 'womens-clothing' },
+        { name: 'Shoes', slug: 'shoes' }
       ],
       'womens-clothing': [
-        { name: 'Fashion', icon: '👗', slug: 'fashion' },
-        { name: 'Men\'s Clothing', icon: '👔', slug: 'mens-clothing' },
-        { name: 'Shoes', icon: '👠', slug: 'shoes' }
+        { name: 'Fashion', slug: 'fashion' },
+        { name: 'Men\'s Clothing', slug: 'mens-clothing' },
+        { name: 'Shoes', slug: 'shoes' }
       ],
       'kids-fashion': [
-        { name: 'Fashion', icon: '👗', slug: 'fashion' },
-        { name: 'Men\'s Clothing', icon: '👔', slug: 'mens-clothing' },
-        { name: 'Women\'s Clothing', icon: '👗', slug: 'womens-clothing' }
+        { name: 'Fashion', slug: 'fashion' },
+        { name: 'Men\'s Clothing', slug: 'mens-clothing' },
+        { name: 'Women\'s Clothing', slug: 'womens-clothing' }
       ],
       'shoes': [
-        { name: 'Fashion', icon: '👗', slug: 'fashion' },
-        { name: 'Men\'s Clothing', icon: '👔', slug: 'mens-clothing' },
-        { name: 'Women\'s Clothing', icon: '👗', slug: 'womens-clothing' }
+        { name: 'Fashion', slug: 'fashion' },
+        { name: 'Men\'s Clothing', slug: 'mens-clothing' },
+        { name: 'Women\'s Clothing', slug: 'womens-clothing' }
       ],
       'bags': [
-        { name: 'Fashion', icon: '👗', slug: 'fashion' },
-        { name: 'Men\'s Clothing', icon: '👔', slug: 'mens-clothing' },
-        { name: 'Women\'s Clothing', icon: '👗', slug: 'womens-clothing' }
+        { name: 'Fashion', slug: 'fashion' },
+        { name: 'Men\'s Clothing', slug: 'mens-clothing' },
+        { name: 'Women\'s Clothing', slug: 'womens-clothing' }
       ]
     }
     
@@ -287,7 +343,15 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   // Filter and sort products
   const filteredProducts = products
     .filter(product => {
-      if (selectedBrands.length > 0 && !selectedBrands.includes(product.brand)) return false
+      if (selectedCategories.length > 0) {
+        // Check if product matches any selected category
+        const productMatchesCategory = selectedCategories.some((selectedCategory: string) => {
+          // Simple category matching based on product name/description
+          const productText = `${product.name} ${product.description}`.toLowerCase()
+          return productText.includes(selectedCategory.toLowerCase())
+        })
+        if (!productMatchesCategory) return false
+      }
       if (product.price < priceRange[0] || product.price > priceRange[1]) return false
       return true
     })
@@ -313,29 +377,23 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   )
 
   const handleAddToCart = async (product: Product) => {
-    // Check if user is authenticated as a buyer
-    if (!user) {
-      // User not logged in, show sign-in modal
-      openSignInModal()
-      return
+    try {
+      await addToCart(product, product.id.toString())
+    } catch (error: any) {
+      if (error.message === 'Authentication required to add items to cart') {
+        // Show authentication required message
+        alert('Please sign in to add items to your cart.')
+      } else {
+        console.error('Error adding to cart:', error)
+      }
     }
-
-    const userRole = getUserRole()
-    if (userRole !== 'buyer') {
-      // User is not a buyer (e.g., they're a seller), show sign-in modal for buyer
-      openSignInModal()
-      return
-    }
-
-    // User is authenticated as a buyer, proceed with add to cart
-    await addToCart(product)
   }
 
-  const handleBrandToggle = (brand: string) => {
-    setSelectedBrands(prev => 
-      prev.includes(brand) 
-        ? prev.filter(b => b !== brand)
-        : [...prev, brand]
+  const handleCategoryToggle = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
     )
   }
 
@@ -345,6 +403,57 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-red mx-auto mb-4"></div>
           <p className="text-gray-600">Loading products...</p>
+          <p className="text-sm text-gray-500 mt-2">This may take a few seconds...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show message if no products found
+  if (products.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+                {/* Header/Banner Section */}
+        <section className="relative h-64 md:h-80 bg-gradient-to-r from-gray-900 to-gray-800">
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
+            style={{
+              backgroundImage: `url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')`
+            }}
+          />
+          <div className="relative z-10 h-full flex items-center">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                {categoryName}
+              </h1>
+              <p className="text-xl text-white/90 max-w-2xl">
+                {categoryDescription}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <div className="bg-white rounded-lg shadow-sm p-12">
+              <div className="text-6xl mb-4">📦</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">No Products Found</h2>
+              <p className="text-gray-600 mb-6">
+                We couldn't find any products in the "{categoryName}" category at the moment.
+              </p>
+              <div className="space-y-3">
+                <Link
+                  href="/"
+                  className="inline-block bg-primary-red hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  Back to Home
+                </Link>
+                <p className="text-sm text-gray-500">
+                  Check back later or browse other categories
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -353,11 +462,11 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header/Banner Section */}
-      <section className="relative h-64 md:h-80 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section className="relative h-64 md:h-80 bg-gradient-to-r from-gray-900 to-gray-800">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')`
+            backgroundImage: `url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')`
           }}
         />
         <div className="relative z-10 h-full flex items-center">
@@ -401,8 +510,8 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filters Sidebar */}
-          <div className="lg:w-64 flex-shrink-0">
+          {/* Left Side - Filters */}
+          <div className="lg:w-80 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-4">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
@@ -431,19 +540,19 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                   </select>
                 </div>
 
-                {/* Brand Filter */}
+                {/* Category Filter */}
                 <div className="mb-6">
-                  <h4 className="font-medium text-gray-900 mb-3">Brand</h4>
-                  <div className="space-y-2">
-                    {brands.map(brand => (
-                      <label key={brand} className="flex items-center">
+                  <h4 className="font-medium text-gray-900 mb-3">Category</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {getCategoryFilters(params.slug).map(category => (
+                      <label key={category.name} className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={selectedBrands.includes(brand)}
-                          onChange={() => handleBrandToggle(brand)}
+                          checked={selectedCategories.includes(category.name)}
+                          onChange={() => handleCategoryToggle(category.name)}
                           className="rounded border-gray-300 text-primary-red focus:ring-primary-red"
                         />
-                        <span className="ml-2 text-sm text-gray-700">{brand}</span>
+                        <span className="ml-2 text-sm text-gray-700">{category.name}</span>
                       </label>
                     ))}
                   </div>
@@ -471,7 +580,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                 {/* Clear Filters */}
                 <button
                   onClick={() => {
-                    setSelectedBrands([])
+                    setSelectedCategories([])
                     setPriceRange([0, 1000])
                   }}
                   className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-md transition-colors"
@@ -482,8 +591,40 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
             </div>
           </div>
 
-          {/* Main Content */}
+          {/* Right Side - Main Content */}
           <div className="flex-1">
+            {/* Category Stats Banner */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-8 border border-blue-100">
+              <div className="flex flex-col md:flex-row items-center justify-between">
+                <div className="text-center md:text-left mb-4 md:mb-0">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    {categoryName} Collection
+                  </h2>
+                  <p className="text-gray-600">
+                    {filteredProducts.length} amazing products waiting for you
+                  </p>
+                </div>
+                <div className="flex items-center space-x-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{filteredProducts.length}</div>
+                    <div className="text-sm text-gray-600">Products</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {getCategoryFilters(params.slug).length}
+                    </div>
+                    <div className="text-sm text-gray-600">Categories</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {Math.max(...filteredProducts.map(p => p.rating), 0)}
+                    </div>
+                    <div className="text-sm text-gray-600">Top Rating</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
               <div className="flex items-center space-x-4 mb-4 sm:mb-0">
@@ -492,45 +633,45 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                 </span>
               </div>
               
-                             <div className="flex items-center space-x-4">
-                 {/* View Cart Button */}
-                 <Link
-                   href={getCartUrl()}
-                   className="flex items-center space-x-2 bg-primary-red hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
-                 >
-                   <ShoppingCart className="w-4 h-4" />
-                   <span className="text-sm font-medium">View Cart</span>
-                 </Link>
-                 
-                 {/* View Mode Toggle */}
-                 <div className="flex items-center bg-white rounded-lg shadow-sm p-1">
-                   <button
-                     onClick={() => setViewMode('grid')}
-                     className={`p-2 rounded ${viewMode === 'grid' ? 'bg-primary-red text-white' : 'text-gray-600'}`}
-                   >
-                     <Grid3X3 className="w-4 h-4" />
-                   </button>
-                   <button
-                     onClick={() => setViewMode('list')}
-                     className={`p-2 rounded ${viewMode === 'list' ? 'bg-primary-red text-white' : 'text-gray-600'}`}
-                   >
-                     <List className="w-4 h-4" />
-                   </button>
-                 </div>
-               </div>
+              <div className="flex items-center space-x-4">
+                {/* View Cart Button */}
+                <Link
+                  href={getCartUrl()}
+                  className="flex items-center space-x-2 bg-primary-red hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  <span className="text-sm font-medium">View Cart</span>
+                </Link>
+                
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-white rounded-lg shadow-sm p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded ${viewMode === 'grid' ? 'bg-primary-red text-white' : 'text-gray-600'}`}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded ${viewMode === 'list' ? 'bg-primary-red text-white' : 'text-gray-600'}`}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Product Grid */}
             <div className={`grid gap-6 ${
               viewMode === 'grid' 
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+                ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' 
                 : 'grid-cols-1'
             }`}>
               {currentProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                <div key={product.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-100">
                   <div className="relative">
                     <img
-                      src={product.image}
+                      src={product.image_url}
                       alt={product.name}
                       className="w-full h-48 object-cover rounded-t-lg"
                     />
@@ -546,7 +687,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                   
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-500">{product.brand}</span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{product.brand}</span>
                       <div className="flex items-center">
                         <Star className="w-4 h-4 text-yellow-400 fill-current" />
                         <span className="text-sm text-gray-600 ml-1">{product.rating}</span>
@@ -572,7 +713,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                           </span>
                         )}
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded ${
+                      <span className={`text-xs px-2 py-1 rounded-full ${
                         product.inStock 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
@@ -581,17 +722,16 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                       </span>
                     </div>
                     
-                                         <button
-                       onClick={() => handleAddToCart(product)}
-                       disabled={!product.inStock || cartLoading}
-                       className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white py-2 px-4 rounded-md transition-colors flex items-center justify-center space-x-2"
-                     >
-                       <ShoppingCart className="w-4 h-4" />
-                       <span>
-                         {cartLoading ? 'Adding...' : 
-                          !user || getUserRole() !== 'buyer' ? 'Sign In to Buy' : 'Add to Cart'}
-                       </span>
-                     </button>
+                    <button
+                      onClick={() => handleAddToCart(product)}
+                      disabled={!product.inStock || cartLoading}
+                      className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white py-2 px-4 rounded-md transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>
+                        {cartLoading ? 'Adding...' : 'Add to Cart'}
+                      </span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -635,23 +775,6 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
             )}
           </div>
         </div>
-
-        {/* Related Categories */}
-        <section className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Related Categories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {relatedCategories.map(category => (
-              <Link
-                key={category.slug}
-                href={`/category/${category.slug}`}
-                className="bg-white rounded-lg shadow-sm p-6 text-center hover:shadow-md transition-shadow"
-              >
-                <div className="text-3xl mb-2">{category.icon}</div>
-                <h3 className="font-semibold text-gray-900">{category.name}</h3>
-              </Link>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   )

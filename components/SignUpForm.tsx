@@ -265,20 +265,34 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onClose, showCloseButton = true
               .
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="auth-button disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Creating account...
-                </div>
-              ) : (
-                'Create your account'
-              )}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Cancel Button */}
+              <button
+                type="button"
+                onClick={onClose || (() => window.history.back())}
+                className="auth-secondary-button flex-1"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="auth-button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Creating account...
+                  </div>
+                ) : (
+                  'Create your account'
+                )}
+              </button>
+            </div>
           </form>
 
           <div className="mt-8">

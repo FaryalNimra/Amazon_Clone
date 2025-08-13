@@ -34,6 +34,8 @@ const LayoutWrapper: React.FC<LayoutWrapperProps> = ({ children }) => {
         <TestimonialsCarousel />
         <Footer />
       </div>
+      
+
     </>
   )
 }

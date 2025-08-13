@@ -1,27 +1,26 @@
 'use client'
 
-import React from 'react'
-import { ArrowLeft, Trash2, Plus, Minus, ShoppingBag, Home } from 'lucide-react'
+import React, { useEffect } from 'react'
+import { ShoppingBag, Home, Plus, Minus, Trash2, Lock } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { useCartNavigation } from '@/hooks/useCartNavigation'
 import { useModal } from '@/contexts/ModalContext'
 import { useRouter } from 'next/navigation'
 
 const CartPage = () => {
-  const { cartItems, cartTotal, updateQuantity, removeFromCart, loading } = useCart()
+  const { cartItems, cartTotal, loading, updateQuantity, removeFromCart, clearCart } = useCart()
   const { user } = useAuth()
-  const { navigateBack } = useCartNavigation()
   const { openSignInModal } = useModal()
   const router = useRouter()
 
+  // Check if user is authenticated
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign in to view your cart</h2>
-          <p className="text-gray-600 mb-6">Please sign in to access your shopping cart</p>
+          <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please sign in to view and manage your cart</p>
           <div className="space-y-3">
             <button
               onClick={openSignInModal}
@@ -31,10 +30,29 @@ const CartPage = () => {
             </button>
             <button
               onClick={() => router.push('/')}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-colors w-full inline-flex items-center justify-center"
+              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors w-full"
             >
-              <Home className="w-4 h-4 mr-2" />
-              Back to Homepage
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
+          <p className="text-gray-600 mb-6">Add some products to get started</p>
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push('/')}
+              className="bg-primary-red hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors w-full"
+            >
+              Continue Shopping
             </button>
           </div>
         </div>
@@ -50,11 +68,11 @@ const CartPage = () => {
             <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
             <p className="text-gray-600 mb-6">Add some products to get started</p>
-            <button 
-              onClick={navigateBack}
+            <button
+              onClick={() => router.push('/')}
               className="bg-primary-red hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-flex items-center"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <Home className="w-4 h-4 mr-2" />
               Continue Shopping
             </button>
           </div>
@@ -63,22 +81,115 @@ const CartPage = () => {
     )
   }
 
+  const handleQuantityChange = async (productId: number, newQuantity: number) => {
+    if (newQuantity < 1) return
+    try {
+      await updateQuantity(productId, newQuantity)
+    } catch (error: any) {
+      if (error.message === 'Authentication required to update cart') {
+        alert('Please sign in to manage your cart.')
+      } else {
+        console.error('Error updating quantity:', error)
+      }
+    }
+  }
+
+  const handleRemoveItem = async (productId: number) => {
+    if (confirm('Are you sure you want to remove this item from your cart?')) {
+      try {
+        await removeFromCart(productId)
+      } catch (error: any) {
+        if (error.message === 'Authentication required to remove items from cart') {
+          alert('Please sign in to manage your cart.')
+        } else {
+          console.error('Error removing item:', error)
+        }
+      }
+    }
+  }
+
+  const handleClearCart = async () => {
+    if (confirm('Are you sure you want to clear your entire cart?')) {
+      try {
+        await clearCart()
+      } catch (error: any) {
+        if (error.message === 'Authentication required to clear cart') {
+          alert('Please sign in to manage your cart.')
+        } else {
+          console.error('Error clearing cart:', error)
+        }
+      }
+    }
+  }
+
+  return <CartContent />
+}
+
+// CartContent component
+const CartContent = () => {
+  const { cartItems, cartTotal, loading, updateQuantity, removeFromCart, clearCart } = useCart()
+  const router = useRouter()
+
+  const handleQuantityChange = async (productId: number, newQuantity: number) => {
+    if (newQuantity < 1) return
+    try {
+      await updateQuantity(productId, newQuantity)
+    } catch (error: any) {
+      if (error.message === 'Authentication required to update cart') {
+        alert('Please sign in to manage your cart.')
+      } else {
+        console.error('Error updating quantity:', error)
+      }
+    }
+  }
+
+  const handleRemoveItem = async (productId: number) => {
+    if (confirm('Are you sure you want to remove this item from your cart?')) {
+      try {
+        await removeFromCart(productId)
+      } catch (error: any) {
+        if (error.message === 'Authentication required to remove items from cart') {
+          alert('Please sign in to manage your cart.')
+        } else {
+          console.error('Error removing item:', error)
+        }
+      }
+    }
+  }
+
+  const handleClearCart = async () => {
+    if (confirm('Are you sure you want to clear your entire cart?')) {
+      try {
+        await clearCart()
+      } catch (error: any) {
+        if (error.message === 'Authentication required to clear cart') {
+          alert('Please sign in to manage your cart.')
+        } else {
+          console.error('Error clearing cart:', error)
+        }
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center">
-            <button 
-              onClick={navigateBack}
-              className="mr-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
             <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
           </div>
-          <div className="text-sm text-gray-600">
-            {cartItems.length} item{cartItems.length !== 1 ? 's' : ''}
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-600">
+              {cartItems.length} item{cartItems.length !== 1 ? 's' : ''}
+            </div>
+            <button
+              onClick={handleClearCart}
+              disabled={loading}
+              className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              Clear Cart
+            </button>
           </div>
         </div>
 
@@ -92,7 +203,7 @@ const CartPage = () => {
                     {/* Product Image */}
                     <div className="flex-shrink-0">
                       <img
-                        src={item.product?.image}
+                        src={item.product?.image_url}
                         alt={item.product?.name}
                         className="w-20 h-20 object-cover rounded-lg"
                       />
@@ -114,19 +225,19 @@ const CartPage = () => {
                         {/* Quantity Controls */}
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
-                            disabled={loading}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                            onClick={() => handleQuantityChange(item.product_id, item.quantity - 1)}
+                            disabled={loading || item.quantity <= 1}
+                            className="p-1 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
-                          <span className="w-12 text-center font-medium">
+                          <span className="text-sm text-gray-600 min-w-[2rem] text-center">
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                            onClick={() => handleQuantityChange(item.product_id, item.quantity + 1)}
                             disabled={loading}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
@@ -135,13 +246,16 @@ const CartPage = () => {
                     </div>
 
                     {/* Remove Button */}
-                    <button
-                      onClick={() => removeFromCart(item.product_id)}
-                      disabled={loading}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex-shrink-0">
+                      <button
+                        onClick={() => handleRemoveItem(item.product_id)}
+                        disabled={loading}
+                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                        title="Remove item"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Item Total */}
@@ -189,16 +303,16 @@ const CartPage = () => {
 
               {/* Checkout Button */}
               <button
-                disabled={loading}
-                className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+                disabled={loading || cartItems.length === 0}
+                className="w-full bg-primary-red hover:bg-red-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Processing...' : 'Proceed to Checkout'}
               </button>
 
               {/* Continue Shopping */}
               <button
-                onClick={navigateBack}
-                className="block w-full text-center mt-4 text-primary-red hover:text-red-600 font-medium transition-colors"
+                onClick={() => router.push('/')}
+                className="w-full mt-3 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-semibold transition-colors"
               >
                 Continue Shopping
               </button>

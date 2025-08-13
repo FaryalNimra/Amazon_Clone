@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff, AlertCircle, CheckCircle, X } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import { signUpSchema, type SignUpFormData } from '@/lib/validation'
 import { supabase } from '@/lib/supabase'
 import { useModal } from '@/contexts/ModalContext'
@@ -12,10 +12,9 @@ import AuthHero from './AuthHero'
 
 interface BuyerSignUpFormProps {
   onClose?: () => void
-  showCloseButton?: boolean
 }
 
-const BuyerSignUpForm: React.FC<BuyerSignUpFormProps> = ({ onClose, showCloseButton = true }) => {
+const BuyerSignUpForm: React.FC<BuyerSignUpFormProps> = ({ onClose }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -187,16 +186,7 @@ const BuyerSignUpForm: React.FC<BuyerSignUpFormProps> = ({ onClose, showCloseBut
     <div className="auth-container">
       <AuthHero />
       <div className="max-w-md w-full space-y-8 animate-slide-up">
-        <div className="auth-card py-8 px-6 relative">
-          {/* Close Button */}
-          {onClose && showCloseButton && (
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          )}
+        <div className="auth-card py-8 px-6">
           <Logo />
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-primary-text mb-2">
@@ -317,25 +307,39 @@ const BuyerSignUpForm: React.FC<BuyerSignUpFormProps> = ({ onClose, showCloseBut
               )}
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading || signUpSuccess}
-              className="auth-button disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Creating account...
-                </div>
-              ) : signUpSuccess ? (
-                <div className="flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Account created! Redirecting...
-                </div>
-              ) : (
-                'Create Buyer Account'
-              )}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Cancel Button */}
+              <button
+                type="button"
+                onClick={onClose || (() => window.history.back())}
+                className="auth-secondary-button flex-1"
+                disabled={isLoading || signUpSuccess}
+              >
+                Cancel
+              </button>
+              
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading || signUpSuccess}
+                className="auth-button flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Creating account...
+                  </div>
+                ) : signUpSuccess ? (
+                  <div className="flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Account created! Redirecting...
+                  </div>
+                ) : (
+                  'Create Buyer Account'
+                )}
+              </button>
+            </div>
           </form>
 
           <div className="mt-8">
