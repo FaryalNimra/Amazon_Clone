@@ -1,70 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { error: 'Supabase configuration missing' },
-        { status: 500 }
-      )
-    }
-    
-    // Get the authorization header from the request
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'No authorization token provided' },
-        { status: 401 }
-      )
-    }
-    
-    // Extract the token
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Create authenticated Supabase client using the user's token
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
-    
-    // Verify the token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      )
-    }
-
-    // Check if user is a seller by verifying seller info in user metadata
-    const sellerInfo = user.user_metadata?.seller_info
-    if (!sellerInfo || !sellerInfo.name) {
-      return NextResponse.json(
-        { error: 'User is not a seller. Please make sure you have a seller account.' },
-        { status: 403 }
-      )
-    }
-
     // Get request body
-    const { products } = await request.json()
+    const { products: productsData, sellerId } = await request.json()
     
-    if (!products || !Array.isArray(products) || products.length === 0) {
+    if (!productsData || !Array.isArray(productsData) || productsData.length === 0) {
       return NextResponse.json(
         { error: 'No products provided' },
         { status: 400 }
       )
     }
 
+    if (!sellerId) {
+      return NextResponse.json(
+        { error: 'Seller ID is required' },
+        { status: 400 }
+      )
+    }
+
     // Validate products
     const validationErrors: string[] = []
-    products.forEach((product: any, index: number) => {
+    productsData.forEach((product: any, index: number) => {
       if (!product.name?.trim()) {
         validationErrors.push(`Row ${index + 1}: Name is required`)
       }
@@ -87,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process categories - check if they exist, create if they don't
-    const uniqueCategories = Array.from(new Set(products.map((p: any) => p.category.trim())))
+    const uniqueCategories = Array.from(new Set(productsData.map((p: any) => p.category.trim())))
     
     for (const categoryName of uniqueCategories) {
       // Check if category exists
@@ -111,14 +69,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare products for insertion
-    const productsToInsert = products.map((product: any) => ({
+    const productsToInsert = productsData.map((product: any) => ({
       name: product.name.trim(),
       description: product.description.trim(),
       category: product.category.trim(),
       price: parseFloat(product.price),
       stock: product.stock || 10, // Use provided stock or default to 10
       image_url: product.image_url?.trim() || null,
-      seller_id: user.id, // Use the user's ID as seller_id
+      seller_id: sellerId, // Use the provided seller ID
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }))
@@ -152,7 +110,7 @@ export async function POST(request: NextRequest) {
       message: 'Products uploaded successfully',
       count: insertedProducts.length,
       products: insertedProducts,
-      seller_name: sellerInfo.name
+      seller_id: sellerId
     })
 
   } catch (error) {

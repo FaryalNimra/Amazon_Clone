@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
 import { useModal } from '@/contexts/ModalContext'
 import { supabase } from '@/lib/supabase'
 import { 
@@ -99,7 +98,6 @@ interface ProductForm {
 
 
 const SellerDashboard: React.FC = () => {
-  const { user, sellerLogout, switchToBuyerMode } = useAuth()
   const { openSellerSignInModal } = useModal()
   const router = useRouter()
   const [sellerData, setSellerData] = useState<SellerData | null>(null)
@@ -107,6 +105,9 @@ const SellerDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  
+  // Custom authentication state
+  const [user, setUser] = useState<any>(null)
   
   // Product form state
   const [productForm, setProductForm] = useState<ProductForm>({
@@ -129,6 +130,7 @@ const SellerDashboard: React.FC = () => {
   // Product management state
   const [products, setProducts] = useState<Product[]>([])
   const [productsLoading, setProductsLoading] = useState(false)
+  const [recentlyUploaded, setRecentlyUploaded] = useState<string[]>([])
   const [productModal, setProductModal] = useState<ProductModalData>({
     isOpen: false,
     mode: 'view',
@@ -173,57 +175,58 @@ const SellerDashboard: React.FC = () => {
 
 
   useEffect(() => {
+    // Add dashboard-active class to body and html to hide scrollbars
+    document.body.classList.add('dashboard-active')
+    document.documentElement.classList.add('dashboard-active')
+    
+    // Cleanup function to remove classes when component unmounts
+    return () => {
+      document.body.classList.remove('dashboard-active')
+      document.documentElement.classList.remove('dashboard-active')
+    }
+  }, [])
+
+  useEffect(() => {
     const checkUserAndRedirect = async () => {
-      if (!user) {
+      // Get user from localStorage (custom authentication)
+      const storedUser = localStorage.getItem('userData')
+      if (!storedUser) {
         openSellerSignInModal()
         return
       }
 
-      // Check if user is verified
-      if (!user.email_confirmed_at) {
-        router.push('/email-verification')
-        return
-      }
+      try {
+        const userData = JSON.parse(storedUser)
+        setUser(userData)
 
-      // Check if user is a seller
-      const userRole = user.user_metadata?.role || user.user_metadata?.user_type
-      
-      if (userRole !== 'seller') {
-        // User is not a seller, redirect to home with message
-        router.push('/?message=You are currently signed in as a buyer. Please log out before registering or logging in as a seller.')
-        return
-      }
+        // Check if user is a seller
+        if (userData.role !== 'seller') {
+          // User is not a seller, redirect to home with message
+          router.push('/?message=You are currently signed in as a buyer. Please log out before registering or logging in as a seller.')
+          return
+        }
 
-      // Get seller data from user metadata
-      const sellerInfo = user.user_metadata?.seller_info
-      if (sellerInfo) {
+        // Set seller data from user session
         setSellerData({
-          id: user.id,
-          name: sellerInfo.name,
-          email: sellerInfo.email,
-          store_name: sellerInfo.store_name,
-          business_type: sellerInfo.business_type,
-          created_at: sellerInfo.created_at,
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          store_name: userData.storeName || 'My Store',
+          business_type: userData.businessType || 'individual',
+          created_at: new Date().toISOString(),
           total_products: 0 // This would come from database in real app
         })
-      } else {
-        // Fallback to basic user data
-        setSellerData({
-          id: user.id,
-          name: user.user_metadata?.name || 'Seller',
-          email: user.email || '',
-          store_name: 'My Store',
-          business_type: 'individual',
-          created_at: user.created_at,
-          total_products: 0
-        })
+        
+        setLoading(false)
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('user')
+        openSellerSignInModal()
       }
-      
-      setLoading(false)
     }
 
     checkUserAndRedirect()
-  }, [user, router, openSellerSignInModal])
+  }, [router, openSellerSignInModal])
 
   // Fetch products when user is authenticated
   useEffect(() => {
@@ -232,8 +235,22 @@ const SellerDashboard: React.FC = () => {
     }
   }, [user?.id, activeTab])
 
-  const handleLogout = async () => {
-    await sellerLogout()
+  // Custom logout function
+  const handleLogout = () => {
+    console.log('🔄 SellerDashboard: Starting logout process...')
+    
+    // Clear localStorage and state
+    localStorage.removeItem('userData')
+    setUser(null)
+    setSellerData(null)
+    
+    // Dispatch custom event to notify other components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('userDataChanged'))
+    }
+    
+    console.log('✅ SellerDashboard: Logout completed, redirecting to home...')
+    router.push('/')
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -451,6 +468,12 @@ const SellerDashboard: React.FC = () => {
 
       // Auto-hide success toast after 3 seconds
       setTimeout(() => setShowSuccessToast(false), 3000)
+      
+      // Automatically switch to manage-products tab to show the new product
+      setActiveTab('manage-products')
+      
+      // Refresh products list to show the newly added product
+      fetchProducts()
 
     } catch (error: any) {
       console.error('❌ Error adding product:', error)
@@ -465,8 +488,11 @@ const SellerDashboard: React.FC = () => {
     }
   }
 
-  const handleSwitchToBuyer = () => {
-    switchToBuyerMode()
+  const handleSwitchToBuyerMode = () => {
+    localStorage.removeItem('user')
+    setUser(null)
+    setSellerData(null)
+    router.push('/')
   }
 
   const fetchProducts = async () => {
@@ -781,10 +807,10 @@ const SellerDashboard: React.FC = () => {
       id: 'store',
       label: 'Store Management',
       icon: Store,
-      description: 'Products, categories, pricing, variations',
-              subItems: [
-        { id: 'add-product', label: 'Add New Product', icon: Package },
+      description: 'View, edit, and manage your products',
+      subItems: [
         { id: 'manage-products', label: 'View / Edit / Delete Products', icon: Edit3 },
+        { id: 'add-product', label: 'Add New Product', icon: Package },
         { id: 'bulk-upload', label: 'Bulk Upload Products', icon: Upload }
       ]
     },
@@ -900,9 +926,10 @@ const SellerDashboard: React.FC = () => {
     
     if (activeTab === 'dashboard') {
       return (
-        <div className="space-y-6">
-          {/* Seller Information Card */}
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="h-[calc(100vh-80px)] p-6 content-scrollable">
+          <div className="space-y-6 max-w-7xl mx-auto">
+            {/* Seller Information Card */}
+            <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Seller Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -1023,14 +1050,16 @@ const SellerDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+        </div>
       )
     }
 
     // Add New Product Form
     if (activeTab === 'add-product') {
       return (
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow">
+        <div className="h-[calc(100vh-80px)] p-6 content-scrollable">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Add New Product</h2>
               <p className="text-sm text-gray-600">Fill in the details below to add a new product to your store</p>
@@ -1046,6 +1075,7 @@ const SellerDashboard: React.FC = () => {
                     </div>
                     <div className="ml-3">
                       <p className="text-sm font-medium text-green-800">{toastMessage}</p>
+                      <p className="text-xs text-green-600 mt-1">Redirecting to products list...</p>
                     </div>
                     <div className="ml-auto pl-3">
                       <button
@@ -1393,6 +1423,16 @@ const SellerDashboard: React.FC = () => {
                 
                 <button
                   type="button"
+                  onClick={() => setActiveTab('manage-products')}
+                  disabled={isSubmitting}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-red disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View All Products
+                </button>
+                
+                <button
+                  type="button"
                   onClick={resetForm}
                   disabled={isSubmitting}
                   className="flex-1 sm:flex-none inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-red disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
@@ -1406,32 +1446,146 @@ const SellerDashboard: React.FC = () => {
             </form>
           </div>
         </div>
+        </div>
       )
     }
 
     // Manage Products Section
     if (activeTab === 'manage-products') {
       return (
-        <div className="space-y-6">
-          {/* Add New Product Button */}
-          <div className="flex justify-end">
-            <button
-                             onClick={() => setActiveTab('add-product')}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-red hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              <Package className="w-4 h-4 mr-2" /> Add New Product
-            </button>
+        <div className="h-[calc(100vh-80px)] p-6 content-scrollable">
+          <div className="space-y-6 max-w-7xl mx-auto">
+          {/* Success Message for Recently Added Product */}
+          {showSuccessToast && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-800">Product added successfully!</p>
+                  <p className="text-sm text-green-600">Your new product is now visible in the list below.</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Products Summary */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Products Overview</h3>
+                <div className="flex items-center space-x-6 mt-2">
+                  <p className="text-sm text-gray-600">
+                    Total Products: <span className="font-semibold text-primary-red">{products.length}</span>
+                  </p>
+                  {(() => {
+                    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+                    const recentCount = products.filter(p => new Date(p.created_at) > oneDayAgo).length
+                    return recentCount > 0 ? (
+                      <p className="text-sm text-green-600">
+                        Recently Added: <span className="font-semibold text-green-700">{recentCount}</span>
+                      </p>
+                    ) : null
+                  })()}
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setActiveTab('bulk-upload')}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-red"
+                >
+                  <Upload className="w-4 h-4 mr-2" /> Bulk Upload
+                </button>
+                <button
+                  onClick={() => setActiveTab('add-product')}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-red hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <Package className="w-4 h-4 mr-2" /> Add New Product
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Product List */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Your Products</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Your Products</h3>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label htmlFor="sort" className="text-sm text-gray-600">Sort by:</label>
+                    <select
+                      id="sort"
+                      onChange={(e) => {
+                        const sortBy = e.target.value
+                        const sortedProducts = [...products].sort((a, b) => {
+                          switch (sortBy) {
+                            case 'newest':
+                              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                            case 'oldest':
+                              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                            case 'price-low':
+                              return a.price - b.price
+                            case 'price-high':
+                              return b.price - a.price
+                            case 'name':
+                              return a.name.localeCompare(b.name)
+                            default:
+                              return 0
+                          }
+                        })
+                        setProducts(sortedProducts)
+                      }}
+                      className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-red"
+                    >
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                      <option value="price-low">Price: Low to High</option>
+                      <option value="price-high">Price: High to Low</option>
+                      <option value="name">Name: A to Z</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <label htmlFor="filter" className="text-sm text-gray-600">Filter:</label>
+                    <select
+                      id="filter"
+                      onChange={(e) => {
+                        const filterBy = e.target.value
+                        if (filterBy === 'recent') {
+                          // Show only products added in last 24 hours
+                          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+                          const recentProducts = products.filter(p => new Date(p.created_at) > oneDayAgo)
+                          setProducts(recentProducts)
+                        } else if (filterBy === 'all') {
+                          // Show all products (refresh from database)
+                          fetchProducts()
+                        }
+                      }}
+                      className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-red"
+                    >
+                      <option value="all">All Products</option>
+                      <option value="recent">Recently Added (24h)</option>
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={fetchProducts}
+                    disabled={productsLoading}
+                    className="inline-flex items-center px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+                    title="Refresh products list"
+                  >
+                    <RotateCcw className={`w-4 h-4 ${productsLoading ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+              </div>
             </div>
             {productsLoading ? (
               <div className="p-6 text-center text-gray-500">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red mx-auto mb-4"></div>
                 <p>Loading products...</p>
+                <p className="text-sm text-gray-400 mt-2">This may take a moment...</p>
               </div>
             ) : products.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
@@ -1440,46 +1594,68 @@ const SellerDashboard: React.FC = () => {
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {products.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50">
-                    <div className="flex items-center">
-                      <img
-                        src={product.image_url || '/placeholder.jpg'} // Use placeholder if no image
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-md mr-4"
-                      />
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">{product.name}</h4>
-                        <p className="text-xs text-gray-500">{product.description}</p>
-                        <p className="text-sm text-gray-700">${product.price.toFixed(2)}</p>
-                        <p className="text-xs text-gray-500">Stock: {product.stock}</p>
+                {products.map((product) => {
+                  // Check if product was recently uploaded via bulk upload
+                  const isRecentlyUploaded = recentlyUploaded.includes(product.id)
+                  // Also check if product was added recently (within last 5 minutes)
+                  const isRecentlyAdded = new Date(product.created_at).getTime() > Date.now() - 5 * 60 * 1000
+                  
+                  return (
+                    <div key={product.id} className={`flex items-center justify-between px-6 py-4 hover:bg-gray-50 ${isRecentlyUploaded || isRecentlyAdded ? 'bg-green-50 border-l-4 border-green-400' : ''}`}>
+                      <div className="flex items-center">
+                        <img
+                          src={product.image_url || '/placeholder.jpg'} // Use placeholder if no image
+                          alt={product.name}
+                          className="w-16 h-16 object-cover rounded-md mr-4"
+                        />
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h4 className="text-sm font-medium text-gray-900">{product.name}</h4>
+                            {isRecentlyUploaded && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <Upload className="w-3 h-3 mr-1" />
+                                Bulk Uploaded
+                              </span>
+                            )}
+                            {isRecentlyAdded && !isRecentlyUploaded && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                New
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500">{product.description}</p>
+                          <p className="text-sm text-gray-700">${product.price.toFixed(2)}</p>
+                          <p className="text-xs text-gray-500">Stock: {product.stock}</p>
+                          <p className="text-xs text-gray-400">Added: {new Date(product.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => openProductModal('view', product)}
+                          className="p-2 text-gray-500 hover:text-gray-700 rounded-full"
+                          title="View Product"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => openProductModal('edit', product)}
+                          className="p-2 text-primary-red hover:text-red-600 rounded-full"
+                          title="Edit Product"
+                        >
+                          <Edit3 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => openProductModal('delete', product)}
+                          className="p-2 text-red-500 hover:text-red-700 rounded-full"
+                          title="Delete Product"
+                        >
+                          <XCircle className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => openProductModal('view', product)}
-                        className="p-2 text-gray-500 hover:text-gray-700 rounded-full"
-                        title="View Product"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => openProductModal('edit', product)}
-                        className="p-2 text-primary-red hover:text-red-600 rounded-full"
-                        title="Edit Product"
-                      >
-                        <Edit3 className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => openProductModal('delete', product)}
-                        className="p-2 text-red-500 hover:text-red-700 rounded-full"
-                        title="Delete Product"
-                      >
-                        <XCircle className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -2013,26 +2189,89 @@ const SellerDashboard: React.FC = () => {
             </div>
           )}
         </div>
+        </div>
       )
     }
 
     // Bulk Upload Section
     if (activeTab === 'bulk-upload') {
       return (
-        <BulkProductUpload 
-          onUploadSuccess={() => {
-            // Refresh products list after successful upload
-            fetchProducts()
-            setActiveTab('manage-products')
-          }} 
-        />
+        <div className="h-[calc(100vh-80px)] p-6 content-scrollable">
+          <div className="space-y-6 max-w-7xl mx-auto">
+          {/* Success Message for Recently Uploaded Products */}
+          {showSuccessToast && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-green-800">Bulk upload successful!</p>
+                  <p className="text-sm text-green-600">
+                    Your products have been uploaded successfully! Redirecting to products list...
+                  </p>
+                  <div className="mt-2 flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        setActiveTab('manage-products')
+                        setShowSuccessToast(false)
+                      }}
+                      className="inline-flex items-center px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 text-sm font-medium rounded-md transition-colors"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      View Products Now
+                    </button>
+                    <button
+                      onClick={() => setShowSuccessToast(false)}
+                      className="inline-flex items-center px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-md transition-colors"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Stay Here
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <BulkProductUpload 
+            sellerId={user?.id}
+            onUploadSuccess={(uploadedProductIds) => {
+              // Show success message
+              setToastMessage('Bulk upload completed successfully!')
+              setShowSuccessToast(true)
+              
+              // Track recently uploaded products
+              if (uploadedProductIds && Array.isArray(uploadedProductIds)) {
+                setRecentlyUploaded(uploadedProductIds)
+              }
+              
+              // Refresh products list after successful upload
+              fetchProducts()
+              
+              // Show a brief success animation, then auto-redirect
+              setTimeout(() => {
+                setActiveTab('manage-products')
+                setShowSuccessToast(false)
+              }, 2000)
+              
+              // Clear recently uploaded state after 10 minutes
+              setTimeout(() => {
+                setRecentlyUploaded([])
+              }, 10 * 60 * 1000)
+            }} 
+          />
+        </div>
+        </div>
       )
     }
 
     // For all other sections, show placeholder content
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="text-center text-gray-500 py-8">
+      <div className="h-[calc(100vh-80px)] p-6 content-scrollable">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-center text-gray-500 py-8">
           {section?.icon && React.createElement(section.icon, { 
             className: "w-12 h-12 mx-auto mb-4 text-gray-300" 
           })}
@@ -2042,14 +2281,40 @@ const SellerDashboard: React.FC = () => {
           <p className="text-sm text-gray-600 mb-4">
             {section?.description || 'Feature coming soon'}
           </p>
-          <p className="text-sm">This feature will be available soon</p>
+          {section?.id === 'store' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800 mb-3">
+                💡 <strong>Tip:</strong> Click on "Store Management" in the sidebar to view and manage your products!
+              </p>
+              <button
+                onClick={() => setActiveTab('manage-products')}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View My Products Now
+              </button>
+            </div>
+          )}
+          {section?.id !== 'store' && (
+            <p className="text-sm">This feature will be available soon</p>
+          )}
+            </div>
+          </div>
         </div>
-      </div>
-    )
-  }
+        </div>
+      )
+    }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div 
+      className="min-h-screen bg-gray-50 flex main-screen-wrapper dashboard-container"
+      style={{ 
+        overflow: 'hidden', 
+        scrollbarWidth: 'none', 
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch'
+      }}
+    >
       {/* Custom Scrollbar Styles */}
       <style jsx>{`
         .scrollbar-thin::-webkit-scrollbar {
@@ -2071,19 +2336,112 @@ const SellerDashboard: React.FC = () => {
           scrollbar-color: #4b5563 #1f2937;
         }
         
+        /* Content area scrollbar styles */
+        .content-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .content-scrollbar::-webkit-scrollbar-track {
+          background: #f3f4f6; /* gray-100 */
+          border-radius: 4px;
+        }
+        .content-scrollbar::-webkit-scrollbar-thumb {
+          background: #d1d5db; /* gray-300 */
+          border-radius: 4px;
+        }
+        .content-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af; /* gray-400 */
+        }
+        .content-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #d1d5db #f3f4f6;
+        }
+        
+        /* Main container - no scrollbars */
+        .main-container {
+          overflow: hidden !important;
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .main-container::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Main screen wrapper - no scrollbars */
+        .main-screen-wrapper {
+          overflow: hidden !important;
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .main-screen-wrapper::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Ensure body and html have no scrollbars */
+        body, html {
+          overflow: hidden !important;
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        body::-webkit-scrollbar, html::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Remove ALL scrollbars from main dashboard */
+        .min-h-screen, .flex, .bg-gray-50 {
+          overflow: hidden !important;
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .min-h-screen::-webkit-scrollbar, .flex::-webkit-scrollbar, .bg-gray-50::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Force remove scrollbars from any element */
+        * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        *::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Global scrollbar removal */
+        html, body, #__next, .main-screen-wrapper, .min-h-screen {
+          overflow: hidden !important;
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        html::-webkit-scrollbar, body::-webkit-scrollbar, #__next::-webkit-scrollbar, .main-screen-wrapper::-webkit-scrollbar, .min-h-screen::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Additional scrollbar hiding for all browsers */
+        * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        *::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Force no scrollbars on main elements */
+        .seller-dashboard-root {
+          overflow: hidden !important;
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .seller-dashboard-root::-webkit-scrollbar {
+          display: none !important;
+        }
+        
+        /* Animation classes */
         .animate-fade-in {
-          animation: fadeIn 0.3s ease-in-out;
+          animation: fadeIn 0.3s ease-out;
         }
         
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       `}</style>
 
@@ -2134,7 +2492,12 @@ const SellerDashboard: React.FC = () => {
                     {/* Main Section */}
                     <button
                       onClick={() => {
-                        setActiveTab(section.id)
+                        // For Store Management, default to manage-products tab
+                        if (section.id === 'store') {
+                          setActiveTab('manage-products')
+                        } else {
+                          setActiveTab(section.id)
+                        }
                         setMobileSidebarOpen(false)
                       }}
                       className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
@@ -2146,7 +2509,14 @@ const SellerDashboard: React.FC = () => {
                       <IconComponent className="w-5 h-5 flex-shrink-0" />
                       {!sidebarCollapsed && (
                         <div className="flex-1 text-left">
-                          <span className="font-medium text-sm">{section.label}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium text-sm">{section.label}</span>
+                            {section.id === 'store' && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                Products
+                              </span>
+                            )}
+                          </div>
                           {!sidebarCollapsed && (
                             <p className="text-xs opacity-75 mt-0.5">{section.description}</p>
                           )}
@@ -2190,7 +2560,7 @@ const SellerDashboard: React.FC = () => {
           {/* Fixed Bottom Actions */}
           <div className="p-4 border-t border-gray-700 space-y-2">
             <button
-              onClick={handleSwitchToBuyer}
+              onClick={handleSwitchToBuyerMode}
               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
             >
               <Home className="w-5 h-5 flex-shrink-0" />
@@ -2213,9 +2583,17 @@ const SellerDashboard: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className={`flex-1 transition-all duration-300 ${
-        sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
-      }`}>
+      <div 
+        className={`flex-1 transition-all duration-300 main-screen-wrapper ${
+          sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+        }`}
+        style={{ 
+          overflow: 'hidden', 
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
         {/* Top Header - Fixed */}
         <div className="bg-white shadow-sm border-b px-6 py-4 sticky top-0 z-10">
           <div className="flex items-center justify-between">
@@ -2248,11 +2626,9 @@ const SellerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Scrollable Content Area */}
-        <div className="h-[calc(100vh-80px)] overflow-y-auto">
-          <div className="p-6">
-            {renderContent()}
-          </div>
+        {/* Content Area - No scrollbars on main container */}
+        <div className="h-[calc(100vh-80px)] overflow-hidden main-container" style={{ overflow: 'hidden', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {renderContent()}
         </div>
       </div>
     </div>

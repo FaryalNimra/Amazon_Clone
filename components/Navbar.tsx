@@ -7,8 +7,8 @@ import { Search, ShoppingCart, Globe, Moon, Sun, ChevronDown, Menu, X, User, Sto
 import { supabase } from '@/lib/supabase'
 import { useModal } from '@/contexts/ModalContext'
 import { useCart } from '@/contexts/CartContext'
-import { useAuth } from '@/contexts/AuthContext'
 import { useCartNavigation } from '@/hooks/useCartNavigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface NavbarProps {
   onThemeToggle: () => void
@@ -23,6 +23,16 @@ interface Product {
   category: string
 }
 
+interface UserData {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  role: string
+  created_at?: string
+  updated_at?: string
+}
+
 const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
   const router = useRouter()
   const [isScrolled, setIsScrolled] = useState(false)
@@ -30,14 +40,216 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false)
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const { openSignUpModal, openSignInModal, openSellerSignInModal } = useModal()
+  const [user, setUser] = useState<UserData | null>(null)
+  const { openSignUpModal, openSignInModal } = useModal()
   const { cartCount } = useCart()
-  const { user, getUserRole, getUserInfo, sellerLogout, switchToBuyerMode } = useAuth()
   const { getCartUrl } = useCartNavigation()
+  const { userRole, userProfile, signOut } = useAuth()
+
+  // Synchronize Navbar user state with AuthContext
+  useEffect(() => {
+    if (userRole && userProfile) {
+      console.log('🔄 Navbar: Syncing with AuthContext user data:', userProfile)
+      setUser({
+        id: userProfile.id,
+        name: userProfile.name,
+        email: userProfile.email,
+        phone: userProfile.phone,
+        role: userProfile.role || userRole,
+        created_at: userProfile.created_at,
+        updated_at: userProfile.updated_at
+      })
+    } else if (!userRole && !userProfile) {
+      console.log('🔄 Navbar: AuthContext shows no user, clearing Navbar state')
+      setUser(null)
+      setIsUserDropdownOpen(false)
+      setIsMobileMenuOpen(false) // Also close mobile menu when user signs out
+      
+      // Also ensure localStorage is cleared to prevent any race conditions
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('userData')
+      }
+    }
+  }, [userRole, userProfile])
+
+  // Load user data from localStorage on component mount
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (typeof window !== 'undefined') {
+        const userData = localStorage.getItem('userData')
+        console.log('🔄 Navbar: Loading user data from localStorage:', userData)
+        
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData)
+            console.log('📝 Navbar: Parsed user data:', parsedUser)
+            
+            // If we have email, fetch fresh data from database
+            if (parsedUser.email) {
+              try {
+                console.log('🔍 Navbar: Fetching fresh user data from database...')
+                let freshUserData = null
+                
+                if (parsedUser.role === 'buyer') {
+                  const { data: buyerData, error } = await supabase
+                    .from('buyers')
+                    .select('id, name, email, phone, role, created_at, updated_at')
+                    .eq('email', parsedUser.email)
+                    .single()
+
+                  if (error) {
+                    console.error('❌ Navbar: Error fetching buyer data:', error)
+                    // Fallback to localStorage data
+                    console.log('📋 Navbar: Using localStorage data as fallback')
+                    setUser(parsedUser)
+                  } else if (buyerData) {
+                    freshUserData = {
+                      id: buyerData.id,
+                      name: buyerData.name,
+                      email: buyerData.email,
+                      phone: buyerData.phone,
+                      role: buyerData.role || 'buyer',
+                      created_at: buyerData.created_at,
+                      updated_at: buyerData.updated_at
+                    }
+                  }
+                } else if (parsedUser.role === 'seller') {
+                  const { data: sellerData, error } = await supabase
+                    .from('sellers')
+                    .select('id, name, email, phone, role, created_at, updated_at')
+                    .eq('email', parsedUser.email)
+                    .single()
+
+                  if (error) {
+                    console.error('❌ Navbar: Error fetching seller data:', error)
+                    // Fallback to localStorage data
+                    console.log('📋 Navbar: Using localStorage data as fallback')
+                    setUser(parsedUser)
+                  } else if (sellerData) {
+                    freshUserData = {
+                      id: sellerData.id,
+                      name: sellerData.name,
+                      email: sellerData.email,
+                      phone: sellerData.phone,
+                      role: sellerData.role || 'seller',
+                      created_at: sellerData.created_at,
+                      updated_at: sellerData.updated_at
+                    }
+                  }
+                }
+                
+                if (freshUserData) {
+                  console.log('✅ Navbar: Fresh user data loaded:', freshUserData)
+                  setUser(freshUserData)
+                  // Update localStorage with fresh data
+                  localStorage.setItem('userData', JSON.stringify(freshUserData))
+                } else {
+                  // No user found, clear user data
+                  console.log('❌ Navbar: No user found in database, clearing user data')
+                  setUser(null)
+                  localStorage.removeItem('userData')
+                }
+              } catch (dbError) {
+                console.error('❌ Navbar: Database error:', dbError)
+                // Fallback to localStorage data
+                console.log('📋 Navbar: Using localStorage data as fallback due to DB error')
+                setUser(parsedUser)
+              }
+            } else {
+              // No email, clear user data
+              console.log('❌ Navbar: No email in user data, clearing')
+              setUser(null)
+              localStorage.removeItem('userData')
+            }
+          } catch (error) {
+            console.error('❌ Navbar: Error parsing user data:', error)
+            localStorage.removeItem('userData')
+            setUser(null)
+          }
+        } else {
+          console.log('📭 Navbar: No user data found in localStorage')
+          setUser(null)
+        }
+      }
+    }
+
+    loadUserData()
+
+    // Listen for storage changes (when user signs in/out from other components)
+    const handleStorageChange = (e: StorageEvent) => {
+      console.log('🔄 Navbar: Storage event detected:', e.key, e.newValue)
+      if (e.key === 'userData') {
+        loadUserData()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Listen for custom events for immediate updates
+    const handleUserDataChange = () => {
+      console.log('🎯 Navbar: Custom userDataChanged event received')
+      console.log('🔄 Navbar: Reloading user data...')
+      
+      // Check if userData actually exists in localStorage before reloading
+      const userData = localStorage.getItem('userData')
+      if (userData) {
+        // User data exists, reload it
+        loadUserData()
+      } else {
+        // No user data, clear state immediately
+        console.log('🧹 Navbar: No user data found, clearing state immediately')
+        setUser(null)
+        setIsUserDropdownOpen(false)
+        setIsMobileMenuOpen(false)
+      }
+    }
+    
+    // Listen for specific sign out event
+    const handleUserSignedOut = () => {
+      console.log('🚪 Navbar: User signed out event received')
+      console.log('🧹 Navbar: Immediately clearing user state...')
+      
+      // Immediately clear user state and close dropdowns
+      setUser(null)
+      setIsUserDropdownOpen(false)
+      setIsMobileMenuOpen(false)
+      
+      // Force immediate UI update
+      setUser(null)
+      
+      // Clear any remaining localStorage data to prevent race conditions
+      localStorage.removeItem('userData')
+    }
+    
+    window.addEventListener('userDataChanged', handleUserDataChange)
+    window.addEventListener('userSignedOut', handleUserSignedOut)
+    
+    // Also check for user data changes periodically (as a fallback)
+    const intervalId = setInterval(() => {
+      const currentUserData = localStorage.getItem('userData')
+      if (currentUserData && !user) {
+        console.log('⏰ Navbar: Periodic check - user data found but user state is null, reloading...')
+        loadUserData()
+      } else if (!currentUserData && user) {
+        // If no user data in localStorage but user state exists, clear it
+        console.log('⏰ Navbar: Periodic check - no user data but user state exists, clearing...')
+        setUser(null)
+        setIsUserDropdownOpen(false)
+        setIsMobileMenuOpen(false)
+      }
+    }, 2000) // Check every 2 seconds
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('userDataChanged', handleUserDataChange)
+      window.removeEventListener('userSignedOut', handleUserSignedOut)
+      clearInterval(intervalId)
+    }
+  }, [user]) // Add user as dependency to avoid infinite loops
 
   const categories = [
     'All',
@@ -109,44 +321,14 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
     return () => clearTimeout(delayDebounceFn)
   }, [searchQuery, selectedCategory])
 
-  // Handle search input changes
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery.trim()) {
-        searchProducts(searchQuery, selectedCategory)
-      } else {
-        setSearchResults([])
-      }
-    }, 300)
-
-    return () => clearTimeout(delayDebounceFn)
-  }, [searchQuery, selectedCategory])
-
   // Get user display name from auth metadata
   const getUserDisplayName = () => {
     if (!user) return ''
     
-    const userInfo = getUserInfo()
-    if (userInfo?.name) {
-      return userInfo.name
-    }
-    
-    // Fallback to user metadata or email
-    return user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+    return user.name || user.email?.split('@')[0] || 'User'
   }
 
-  const getCurrentUserRole = () => {
-    if (!user) return null
-    return getUserRole() || 'buyer'
-  }
 
-  // Check if user is currently in seller mode (on seller dashboard)
-  const isInSellerMode = () => {
-    if (typeof window !== 'undefined') {
-      return window.location.pathname.startsWith('/seller-dashboard')
-    }
-    return false
-  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -183,48 +365,39 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
 
   const handleSignOut = async () => {
     try {
-      // Use sellerLogout if user is a seller, otherwise use regular signOut
-      const userRole = getUserRole()
-      if (userRole === 'seller') {
-        await sellerLogout()
-      } else {
-        await supabase.auth.signOut()
-      }
+      console.log('🔄 Navbar: Starting sign out process...')
+      
+      // Close dropdown immediately for better UX
+      setIsUserDropdownOpen(false)
+      
+      // Clear local state immediately for better UX
+      setUser(null)
+      setIsMobileMenuOpen(false)
+      
+      // Call the signOut function from AuthContext (this will handle everything)
+      await signOut()
+      
+      console.log('✅ Navbar: Sign out completed successfully')
+      
     } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
-
-  const handleModeSwitch = (mode: 'buyer' | 'seller') => {
-    setIsModeDropdownOpen(false)
-    
-    // If user is not logged in, show appropriate sign-in modal
-    if (!user) {
-      if (mode === 'seller') {
-        openSellerSignInModal()
-      } else {
-        openSignInModal()
+      console.error('❌ Navbar: Error during sign out:', error)
+      // Even if there's an error, clear local state
+      setUser(null)
+      setIsUserDropdownOpen(false)
+      setIsMobileMenuOpen(false)
+      localStorage.removeItem('userData')
+      
+      // Dispatch events manually if AuthContext failed
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('userDataChanged'))
+        window.dispatchEvent(new CustomEvent('userSignedOut', {
+          detail: { timestamp: Date.now() }
+        }))
       }
-      return
-    }
-    
-    // If user is logged in, navigate to appropriate mode
-    if (mode === 'buyer') {
-      // For sellers switching to buyer mode, clear session and redirect
-      const userRole = getUserRole()
-      if (userRole === 'seller') {
-        switchToBuyerMode()
-      } else {
-        router.push('/')
-      }
-    } else if (mode === 'seller') {
-      router.push('/seller-dashboard')
     }
   }
 
   const displayName = getUserDisplayName()
-  const userRole = getCurrentUserRole()
-  const isCurrentlyInSellerMode = isInSellerMode()
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -347,6 +520,7 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
 
           {/* Right side items */}
           <div className="flex items-center space-x-4">
+            
             {/* Theme Toggle */}
             <button
               onClick={onThemeToggle}
@@ -367,86 +541,100 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              {/* Show complete buyer navbar when not in seller mode */}
-              {!isCurrentlyInSellerMode && (
-                <>
-                  {/* Show name and logout when logged in */}
-                  {user && (
-                    <div className="hidden sm:flex items-center space-x-2">
-                      <span className="text-sm text-primary-text dark:text-white">
-                        Hi, {displayName}
+              {/* Show user profile for buyers */}
+              {user && user.role === 'buyer' && (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                    className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-primary-red rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">
+                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                       </span>
-                      <button
-                        onClick={handleSignOut}
-                        className="text-sm text-text-muted hover:text-primary-red transition-colors dark:text-gray-400 dark:hover:text-red-500"
-                      >
-                        Logout
-                      </button>
                     </div>
-                  )}
+                    <span className="hidden sm:block text-gray-700 dark:text-gray-300">
+                      Hi, {user.name || 'User'}
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
                   
-                  {/* Show sign-in/sign-up when not logged in */}
-                  {!user && (
-                    <div className="hidden sm:flex items-center space-x-4">
-                      <button
-                        onClick={openSignInModal}
-                        className="text-sm text-primary-text hover:text-primary-red transition-colors dark:text-white dark:hover:text-red-500"
-                      >
-                        Sign In
-                      </button>
-                      <button
-                        onClick={openSignUpModal}
-                        className="bg-primary-red text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
-                      >
-                        Sign Up
-                      </button>
+                  {/* User Dropdown Menu */}
+                  {isUserDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+                      {/* User Info Section */}
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-primary-red rounded-full flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">
+                              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-white">
+                              {user.name || 'User'}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {user.email}
+                            </p>
+                            {user.phone && (
+                              <p className="text-xs text-gray-400 dark:text-gray-500">
+                                {user.phone}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+                              {user.role || 'buyer'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Account Actions */}
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setIsUserDropdownOpen(false)
+                            // Add profile/edit functionality here
+                          }}
+                          className="flex items-center space-x-3 w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <User className="h-4 w-4" />
+                          <span>My Profile</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setIsUserDropdownOpen(false)
+                            handleSignOut()
+                          }}
+                          className="flex items-center space-x-3 w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
                     </div>
                   )}
-                </>
+                </div>
               )}
               
-              {/* Mode Switch Dropdown - Always visible */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsModeDropdownOpen(!isModeDropdownOpen)}
-                  className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                >
-                  {isCurrentlyInSellerMode ? (
-                    <>
-                      <Store className="h-4 w-4" />
-                      <span>As Seller</span>
-                    </>
-                  ) : (
-                    <>
-                      <User className="h-4 w-4" />
-                      <span>As Buyer</span>
-                    </>
-                  )}
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-                
-                {isModeDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                    <button
-                      onClick={() => handleModeSwitch('buyer')}
-                      className="flex items-center space-x-3 w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <User className="h-4 w-4" />
-                      <span>As Buyer</span>
-                    </button>
-                    {/* Only show "As Seller" option if user is not logged in as a buyer */}
-                    {(!user || getUserRole() !== 'buyer') && (
-                      <button
-                        onClick={() => handleModeSwitch('seller')}
-                        className="flex items-center space-x-3 w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <Store className="h-4 w-4" />
-                        <span>As Seller</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              {/* Show sign-in/sign-up when not logged in */}
+              {!user && (
+                <div className="hidden sm:flex items-center space-x-4">
+                  <button
+                    onClick={openSignInModal}
+                    className="text-sm text-primary-text hover:text-primary-red transition-colors dark:text-white dark:hover:text-red-500"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={openSignUpModal}
+                    className="bg-primary-red text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -456,6 +644,13 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
+            
+            {/* Debug info - remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="hidden lg:block text-xs text-gray-400">
+                User: {user ? `${user.role} (${user.name})` : 'None'}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -498,116 +693,52 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
               </div>
             </div>
 
-            {/* Mobile menu content based on mode */}
-            {!isCurrentlyInSellerMode ? (
-              <>
-                {/* Show name when logged in */}
-                {user && (
-                  <div className="px-3 py-2 text-sm text-text-muted border-b border-border-light mb-2 dark:text-gray-400 dark:border-gray-700">
-                    Hi, {displayName}
-                  </div>
-                )}
-                
-                {/* Mobile Mode Switch */}
-                <div className="px-3 py-2 border-b border-border-light mb-2 dark:border-gray-700">
-                  <div className="text-sm text-text-muted mb-2 dark:text-gray-400">Switch Mode:</div>
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => {
-                        handleModeSwitch('buyer')
-                        setIsMobileMenuOpen(false)
-                      }}
-                      className="flex items-center space-x-2 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
-                    >
-                      <User className="h-4 w-4" />
-                      <span>As Buyer</span>
-                    </button>
-                    {/* Only show "As Seller" option if user is not logged in as a buyer */}
-                    {(!user || getUserRole() !== 'buyer') && (
-                      <button
-                        onClick={() => {
-                          handleModeSwitch('seller')
-                          setIsMobileMenuOpen(false)
-                        }}
-                        className="flex items-center space-x-3 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
-                      >
-                        <Store className="h-4 w-4" />
-                        <span>As Seller</span>
-                      </button>
-                    )}
-                  </div>
+            {/* Mobile menu content */}
+            <>
+              {/* Show name when logged in as BUYER only */}
+              {user && user.role === 'buyer' && (
+                <div className="px-3 py-2 text-sm text-text-muted border-b border-border-light mb-2 dark:text-gray-400 dark:border-gray-700">
+                  Hi, {displayName}
                 </div>
-                
-                {/* Show logout when logged in */}
-                {user && (
+              )}
+              
+              {/* Show logout when logged in as BUYER only */}
+              {user && user.role === 'buyer' && (
+                <button
+                  onClick={() => {
+                    handleSignOut()
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="block w-full text-left text-primary-text hover:text-primary-red transition-colors px-3 py-2 rounded-md text-base font-medium dark:text-white dark:hover:text-red-500"
+                >
+                  Logout
+                </button>
+              )}
+              
+              {/* Show sign-in/sign-up when not logged in */}
+              {!user && (
+                <>
                   <button
                     onClick={() => {
-                      handleSignOut()
+                      openSignInModal()
                       setIsMobileMenuOpen(false)
                     }}
                     className="block w-full text-left text-primary-text hover:text-primary-red transition-colors px-3 py-2 rounded-md text-base font-medium dark:text-white dark:hover:text-red-500"
                   >
-                    Logout
+                    Sign In
                   </button>
-                )}
-                
-                {/* Show sign-in/sign-up when not logged in */}
-                {!user && (
-                  <>
-                    <button
-                      onClick={() => {
-                        openSignInModal()
-                        setIsMobileMenuOpen(false)
-                      }}
-                      className="block w-full text-left text-primary-text hover:text-primary-red transition-colors px-3 py-2 rounded-md text-base font-medium dark:text-white dark:hover:text-red-500"
-                    >
-                      Sign In
-                    </button>
-                    <button
-                      onClick={() => {
-                        openSignUpModal()
-                        setIsMobileMenuOpen(false)
-                      }}
-                      className="block w-full text-left bg-primary-red text-white px-3 py-2 rounded-md text-base font-medium hover:bg-red-600 transition-colors"
-                    >
-                      Sign Up
-                    </button>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                {/* Mobile Mode Switch for seller mode */}
-                <div className="px-3 py-2 border-b border-border-light mb-2 dark:border-gray-700">
-                  <div className="text-sm text-text-muted mb-2 dark:text-gray-400">Choose Mode:</div>
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => {
-                        handleModeSwitch('buyer')
-                        setIsMobileMenuOpen(false)
-                      }}
-                      className="flex items-center space-x-2 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
-                    >
-                      <User className="h-4 w-4" />
-                      <span>As Buyer</span>
-                    </button>
-                    {/* Only show "As Seller" option if user is not logged in as a buyer */}
-                    {(!user || getUserRole() !== 'buyer') && (
-                      <button
-                        onClick={() => {
-                          handleModeSwitch('seller')
-                          setIsMobileMenuOpen(false)
-                        }}
-                        className="flex items-center space-x-3 w-full text-left text-primary-text hover:text-primary-red transition-colors px-2 py-1 rounded dark:text-white dark:hover:text-red-500"
-                      >
-                        <Store className="h-4 w-4" />
-                        <span>As Seller</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+                  <button
+                    onClick={() => {
+                      openSignUpModal()
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className="block w-full text-left bg-primary-red text-white px-4 py-2 rounded-md text-base font-medium hover:bg-red-600 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
+            </>
           </div>
         </div>
       )}

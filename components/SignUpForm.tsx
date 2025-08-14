@@ -44,29 +44,41 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onClose, showCloseButton = true
     setError('')
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Create user account with all data stored in Supabase Auth metadata
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             name: data.name,
             phone: data.phone,
+            role: 'buyer', // Default role for regular signup
+            user_type: 'buyer',
+            created_at: new Date().toISOString()
           },
         },
       })
 
-      if (error) {
-        setError(error.message)
-      } else {
+      if (signUpError) {
+        setError(signUpError.message)
+        return
+      }
+
+      if (signUpData.user) {
+        // Successfully created user with metadata
         setSuccess(true)
+        
         // Close modal after a delay to show success message
         setTimeout(() => {
           if (onClose) {
             onClose()
           }
         }, 3000)
+      } else {
+        setError('Failed to create user account')
       }
     } catch (err) {
+      console.error('Signup error:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)

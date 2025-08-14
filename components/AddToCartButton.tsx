@@ -32,13 +32,28 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const isLoading = buttonLoadingStates[product.id.toString()] || false
   const isDisabled = disabled || isLoading
 
+  // Debug logging
+  console.log('🛒 AddToCartButton Debug:', {
+    productId: product.id,
+    productName: product.name,
+    user: user,
+    userRole: getUserRole(),
+    isDisabled: isDisabled,
+    showAuthModal: showAuthModal
+  })
+
   const handleAddToCart = async () => {
+    console.log('🛒 AddToCartButton: handleAddToCart called')
+    console.log('🛒 AddToCartButton: Current user state:', user)
+    
     // Check if user is authenticated
     if (!user) {
+      console.log('🛒 AddToCartButton: User not authenticated, showing auth modal')
       setShowAuthModal(true)
       return
     }
 
+    console.log('🛒 AddToCartButton: User authenticated, proceeding with add to cart')
     // User is authenticated, proceed with adding to cart
     try {
       await addToCart(product, product.id?.toString() || 'unknown')

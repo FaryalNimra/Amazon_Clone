@@ -186,6 +186,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error adding to cart in database:', error)
         }
       }
+      
     } catch (error) {
       console.error('Error adding to cart:', error)
       throw error
@@ -226,6 +227,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Error updating quantity in database:', error)
       }
+      
     } catch (error) {
       console.error('Error updating quantity:', error)
       throw error
@@ -255,6 +257,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Error removing from cart in database:', error)
       }
+      
     } catch (error) {
       console.error('Error removing from cart:', error)
       throw error
@@ -283,6 +286,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Error clearing cart in database:', error)
       }
+      
     } catch (error) {
       console.error('Error clearing cart:', error)
       throw error

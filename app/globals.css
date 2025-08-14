@@ -13,6 +13,113 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', sans-serif;
   }
+  
+  /* Hide scrollbars on main dashboard containers */
+  .dashboard-container {
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  .dashboard-container::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  /* Allow scrolling on individual content areas */
+  .content-scrollable {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    scrollbar-width: thin !important;
+    -ms-overflow-style: auto !important;
+  }
+  
+  .content-scrollable::-webkit-scrollbar {
+    width: 8px !important;
+    display: block !important;
+  }
+  
+  .content-scrollable::-webkit-scrollbar-track {
+    background: #f3f4f6 !important;
+    border-radius: 4px !important;
+  }
+  
+  .content-scrollable::-webkit-scrollbar-thumb {
+    background: #d1d5db !important;
+    border-radius: 4px !important;
+  }
+  
+  .content-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af !important;
+  }
+  
+  /* Global scrollbar hiding for dashboard */
+  .dashboard-container * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  .dashboard-container *::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  /* Exception for content areas that should scroll */
+  .dashboard-container .content-scrollable {
+    scrollbar-width: thin !important;
+    -ms-overflow-style: auto !important;
+  }
+  
+  .dashboard-container .content-scrollable::-webkit-scrollbar {
+    display: block !important;
+    width: 8px !important;
+  }
+  
+  /* Force no scrollbars on html and body when dashboard is active */
+  .dashboard-active {
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  .dashboard-active::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  /* Additional scrollbar hiding for all dashboard elements */
+  .dashboard-container,
+  .dashboard-container > *,
+  .dashboard-container > * > * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  .dashboard-container::-webkit-scrollbar,
+  .dashboard-container > *::-webkit-scrollbar,
+  .dashboard-container > * > *::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  /* Ensure main screen wrapper has no scrollbars */
+  .main-screen-wrapper {
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  .main-screen-wrapper::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  /* Hide scrollbars on all dashboard-related containers */
+  [class*="dashboard"],
+  [class*="min-h-screen"] {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  [class*="dashboard"]::-webkit-scrollbar,
+  [class*="min-h-screen"]::-webkit-scrollbar {
+    display: none !important;
+  }
 }
 
 @layer components {

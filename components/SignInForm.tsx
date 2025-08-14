@@ -22,10 +22,11 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [signInSuccess, setSignInSuccess] = useState(false)
+  const [userRole, setUserRole] = useState<'buyer' | 'seller' | null>(null)
   const [emailVerificationRequired, setEmailVerificationRequired] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const [showUnverifiedEmailModal, setShowUnverifiedEmailModal] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, buyerSignIn } = useAuth()
   const { closeSellerSignInModal, closeSellerSignUpModal, openSignUpModal, openSellerSignUpModal, closeSignInModal } = useModal()
 
   const {
@@ -41,48 +42,42 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
     setError('')
 
     try {
-      console.log('Attempting sign in for:', data.email)
+      console.log('🔄 Attempting sign in for:', data.email)
       
-      // First, check if the user exists and their email verification status
-      const { data: { user }, error: userError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      })
-
-      if (userError) {
-        console.error('Sign in error:', userError)
-        setError(userError.message)
+      // Use buyerSignIn for both buyer and seller authentication
+      // The function will automatically detect the user type and redirect accordingly
+      console.log('🔄 SignInForm: Using buyerSignIn for authentication...')
+      const result = await buyerSignIn(data.email, data.password)
+      
+      if (result.error) {
+        console.error('❌ SignInForm: Sign in failed:', result.error)
+        setError(result.error)
         return
       }
-
-      if (user) {
-        // Check if email is verified using last_sign_in_at
-        if (!user.last_sign_in_at) {
-          console.log('User email not verified, showing verification required popup')
-          setUserEmail(data.email)
-          setShowUnverifiedEmailModal(true)
-          return
-        }
-
-        // Email is verified, proceed with sign in
-        const { error } = await signIn(data.email, data.password)
-
-        if (error) {
-          console.error('Sign in error:', error)
-          setError(error)
-        } else {
-          console.log('Sign in successful, showing success message...')
-          setSignInSuccess(true)
-          // Show success message briefly before redirecting
-          setTimeout(() => {
-            if (onClose) onClose()
-            closeSellerSignInModal()
-            closeSellerSignUpModal()
-          }, 2000)
+      
+      // Sign in successful
+      console.log('✅ SignInForm: Sign in successful!')
+      setSignInSuccess(true)
+      
+      // Get the actual user role from localStorage to show correct message
+      const userData = localStorage.getItem('userData')
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData)
+          setUserRole(parsedUser.role)
+          console.log('👤 SignInForm: User role detected:', parsedUser.role)
+        } catch (e) {
+          console.error('Error parsing user data:', e)
         }
       }
+      
+      console.log('🎉 Sign in successful! Redirecting...')
+      
+      // Success message will show, then redirect happens automatically
+      return
+
     } catch (err) {
-      console.error('Unexpected sign in error:', err)
+      console.error('❌ Unexpected sign in error:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
@@ -209,12 +204,12 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
             )}
 
             {signInSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
-                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center">
+                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                   <CheckCircle className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-green-700 text-sm">
-                  <strong>Congratulations! You are signed in</strong>
+                  <strong>Sign in successful!</strong> {userRole === 'buyer' ? 'Redirecting to home page...' : userRole === 'seller' ? 'Redirecting to seller dashboard...' : 'Redirecting...'}
                 </span>
               </div>
             )}
@@ -286,7 +281,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
             <button
               type="submit"
               disabled={isLoading || signInSuccess}
-              className="auth-button disabled:opacity-50 disabled:cursor-not-allowed"
+              className="auth-button w-full py-4 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 font-semibold text-lg"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -296,10 +291,10 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
               ) : signInSuccess ? (
                 <div className="flex items-center justify-center">
                   <CheckCircle className="w-5 h-5 mr-2" />
-                  Success! Redirecting...
+                  {userRole === 'buyer' ? 'Redirecting to home page...' : userRole === 'seller' ? 'Redirecting to seller dashboard...' : 'Redirecting...'}
                 </div>
               ) : (
-                'Sign in'
+                'Sign In'
               )}
             </button>
           </form>

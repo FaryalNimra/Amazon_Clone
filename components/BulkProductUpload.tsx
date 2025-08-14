@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { Upload, Edit3, Trash2, Check, X, Download } from 'lucide-react'
+import { Upload, Edit3, Trash2, Check, X, Download, Eye } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface ProductRow {
@@ -16,10 +16,11 @@ interface ProductRow {
 }
 
 interface BulkUploadProps {
-  onUploadSuccess: () => void
+  onUploadSuccess: (uploadedProductIds?: string[]) => void
+  sellerId?: string
 }
 
-const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess }) => {
+const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerId }) => {
   const [products, setProducts] = useState<ProductRow[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
@@ -226,28 +227,29 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess }) => {
       return
     }
 
+    if (!sellerId) {
+      showMessage('error', 'Seller ID not found. Please make sure you are logged in as a seller.')
+      return
+    }
+
     setIsUploading(true)
     try {
-      // Get the current session token
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
-        showMessage('error', 'You must be logged in to upload products')
-        return
-      }
-
       const response = await fetch('/api/products/bulk-upload', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ products })
+        body: JSON.stringify({ products, sellerId })
       })
 
       if (response.ok) {
+        const result = await response.json()
         showMessage('success', 'Products uploaded successfully!')
         setProducts([])
-        onUploadSuccess()
+        
+        // Pass the uploaded product IDs to the success callback
+        const uploadedIds = result.products?.map((p: any) => p.id) || []
+        onUploadSuccess(uploadedIds)
       } else {
         const errorData = await response.json()
         let errorMessage = 'Upload failed'
@@ -286,16 +288,33 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess }) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6 mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary-red to-red-600 rounded-xl flex items-center justify-center">
-            <Upload className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary-red to-red-600 rounded-xl flex items-center justify-center">
+              <Upload className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Bulk Product Upload</h2>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                Upload multiple products at once using a CSV file. Review and edit products before final upload 
+                to ensure accuracy and quality.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Bulk Product Upload</h2>
-            <p className="text-gray-600 text-lg leading-relaxed">
-              Upload multiple products at once using a CSV file. Review and edit products before final upload 
-              to ensure accuracy and quality.
-            </p>
+          <div className="flex flex-col items-end space-y-2">
+            <p className="text-sm text-gray-600">After upload, products will appear in:</p>
+            <button
+              onClick={() => {
+                // This will be handled by the parent component
+                if (onUploadSuccess) {
+                  onUploadSuccess()
+                }
+              }}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View All Products
+            </button>
           </div>
         </div>
       </div>

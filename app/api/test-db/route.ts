@@ -1,55 +1,78 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    console.log('🧪 Testing database connection...')
+    console.log('🔍 Testing database connection and schema...')
     
-    // Test if products table exists and is accessible
-    const { data: tableTest, error: tableError } = await supabase
+    // Test 1: Basic connection
+    const { data: connectionTest, error: connectionError } = await supabase
       .from('products')
-      .select('count')
+      .select('id')
       .limit(1)
     
-    if (tableError) {
-      console.error('❌ Table access error:', tableError)
-      return NextResponse.json(
-        { success: false, error: 'Table access failed', details: tableError.message },
-        { status: 500 }
-      )
+    if (connectionError) {
+      console.error('❌ Database connection failed:', connectionError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database connection failed',
+        details: connectionError.message 
+      }, { status: 500 })
     }
     
-    console.log('✅ Products table accessible:', tableTest)
+    console.log('✅ Database connection successful')
     
-    // Test RLS policies
-    const { data: policyTest, error: policyError } = await supabase
-      .from('products')
-      .select('*')
-      .limit(1)
-    
-    if (policyError) {
-      console.error('❌ RLS policy error:', policyError)
-      return NextResponse.json(
-        { success: false, error: 'RLS policy failed', details: policyError.message },
-        { status: 500 }
-      )
+    // Test 2: Check if profiles table exists
+    try {
+      const { data: profilesTest, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1)
+      
+      if (profilesError) {
+        console.log('❌ Profiles table error:', profilesError)
+        return NextResponse.json({
+          success: true,
+          connection: 'Connected',
+          profilesTable: {
+            exists: false,
+            error: profilesError.message,
+            code: profilesError.code,
+            details: profilesError.details,
+            hint: profilesError.hint
+          }
+        })
+      }
+      
+      console.log('✅ Profiles table exists and is accessible')
+      return NextResponse.json({
+        success: true,
+        connection: 'Connected',
+        profilesTable: {
+          exists: true,
+          accessible: true
+        }
+      })
+      
+    } catch (profilesErr: any) {
+      console.error('❌ Unexpected error checking profiles table:', profilesErr)
+      return NextResponse.json({
+        success: true,
+        connection: 'Connected',
+        profilesTable: {
+          exists: false,
+          error: profilesErr.message
+        }
+      })
     }
     
-    console.log('✅ RLS policies working:', policyTest)
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Database connection successful',
-      tableTest,
-      policyTest
-    })
-
-  } catch (error: any) {
-    console.error('❌ Database test error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Database test failed', details: error.message },
-      { status: 500 }
-    )
+  } catch (err: any) {
+    console.error('❌ API route error:', err)
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Internal server error',
+      details: err.message 
+    }, { status: 500 })
   }
 }
 

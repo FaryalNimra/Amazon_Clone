@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff, AlertCircle, CheckCircle, Mail, X } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, CheckCircle, Mail, X, ArrowRight } from 'lucide-react'
 import { sellerSignUpSchema, type SellerSignUpFormData } from '@/lib/validation'
 import { supabase } from '@/lib/supabase'
 import { useModal } from '@/contexts/ModalContext'
@@ -70,48 +70,65 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
     try {
       const normalizedEmail = data.email.toLowerCase().trim()
 
-      // Directly try to sign up, Supabase will return error if email exists
-      const { data: authData, error } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password: data.password,
-        options: {
-          data: {
+      console.log('🚀 Submitting seller signup data:', data)
+
+      // Direct insert into sellers table without Supabase auth
+      try {
+        console.log('🔄 Storing seller data directly in sellers table...')
+        
+        const { data: sellerData, error: sellerError } = await supabase
+          .from('sellers')
+          .insert({
             name: data.name,
+            email: normalizedEmail,
             phone: data.phone,
-            role: 'seller',
-            user_type: 'seller',
-            seller_info: {
-              name: data.name,
-              email: normalizedEmail,
-              phone: data.phone,
-              store_name: data.storeName,
-              gst_number: data.gstNumber,
-              business_type: data.businessType,
-              business_address: data.businessAddress,
-              created_at: new Date().toISOString()
-            }
-          },
-        },
-      })
+            password: data.password, // Note: In production, hash this password
+            store_name: data.storeName,
+            gst_number: data.gstNumber,
+            business_type: data.businessType,
+            business_address: data.businessAddress,
+            role: 'seller'
+          })
+          .select()
 
-      if (error) {
-        if (
-          error.message.includes('already registered') ||
-          error.message.includes('already exists') ||
-          error.message.includes('User already registered')
-        ) {
-          // Account already exists
-          setShowAccountExistsModal(true)
-        } else {
-          setError(error.message || 'An error occurred during registration.')
+        if (sellerError) {
+          console.error('❌ Error storing seller data:', sellerError)
+          console.log('📝 Seller table error details:', {
+            message: sellerError.message,
+            details: sellerError.details,
+            hint: sellerError.hint,
+            code: sellerError.code
+          })
+          
+          if (sellerError.code === '23505') {
+            setError('An account with this email already exists.')
+          } else if (sellerError.message.includes('duplicate key')) {
+            setError('An account with this email already exists.')
+          } else {
+            setError(sellerError.message || 'Failed to create account. Please try again.')
+          }
+          return
         }
-        return
+
+        if (sellerData && sellerData.length > 0) {
+          console.log('✅ Seller data stored successfully in sellers table:', sellerData[0])
+          
+          // Create a simple user session (you can implement your own session management)
+          const seller = sellerData[0]
+          console.log('🎉 Seller account created successfully!')
+          console.log('📝 Seller data:', seller)
+          
+          setSignUpSuccess(true)
+          setShowAccountCreatedModal(true)
+        } else {
+          setError('Failed to create account. Please try again.')
+        }
+        
+      } catch (sellerErr) {
+        console.error('❌ Unexpected error storing seller data:', sellerErr)
+        setError('An unexpected error occurred. Please try again.')
       }
 
-      if (authData.user) {
-        // Account created successfully
-        setShowAccountCreatedModal(true)
-      }
     } catch (err) {
       console.error('Unexpected signup error:', err)
       setError('An unexpected error occurred. Please try again.')
@@ -179,26 +196,27 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
         <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
         <div className="flex min-h-full items-center justify-center p-4">
           <div className="relative w-full max-w-md">
-            <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 transform transition-all">
               <div className="text-center">
-                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-8 h-8 text-white" />
+                <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="w-10 h-10 text-white" />
                 </div>
                 
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Account Created!
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                  Seller Account Created!
                 </h2>
                 
-                <p className="text-gray-600 mb-6">
-                  Please verify your email before signing in.
+                <p className="text-gray-600 mb-8 text-lg">
+                  Welcome to our platform! Your seller account has been successfully created. You can now start selling your products.
                 </p>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <button
                     onClick={handleSignInRedirect}
-                    className="w-full bg-primary-red text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors"
+                    className="w-full bg-primary-red hover:bg-red-600 text-white px-6 py-4 rounded-xl hover:scale-105 transition-all duration-200 transform font-semibold text-lg flex items-center justify-center"
                   >
-                    Sign In
+                    Sign In Now
+                    <ArrowRight className="w-5 h-5 ml-2" />
                   </button>
 
                   <button
@@ -206,9 +224,9 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
                       setShowAccountCreatedModal(false)
                       if (onClose) onClose()
                     }}
-                    className="w-full bg-gray-200 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors"
+                    className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors font-medium"
                   >
-                    Close
+                    Continue to Dashboard
                   </button>
                 </div>
               </div>
@@ -246,15 +264,15 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
-                <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center">
+                <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
                 <span className="text-red-700 text-sm">{error}</span>
               </div>
             )}
 
             {signUpSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
-                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center">
+                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                   <CheckCircle className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-green-700 text-sm">
@@ -263,62 +281,62 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
               </div>
             )}
 
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="name" className="block text-sm font-semibold text-primary-text">
                 Full Name
               </label>
               <input
                 {...register('name')}
                 type="text"
                 id="name"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="Enter your full name"
               />
               {errors.name && (
-                <p className="text-red-600 text-sm mt-2">{errors.name.message}</p>
+                <p className="text-red-600 text-sm">{errors.name.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="storeName" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="storeName" className="block text-sm font-semibold text-primary-text">
                 Store Name
               </label>
               <input
                 {...register('storeName')}
                 type="text"
                 id="storeName"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="Enter your store name"
               />
               {errors.storeName && (
-                <p className="text-red-600 text-sm mt-2">{errors.storeName.message}</p>
+                <p className="text-red-600 text-sm">{errors.storeName.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="gstNumber" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="gstNumber" className="block text-sm font-semibold text-primary-text">
                 GST Number
               </label>
               <input
                 {...register('gstNumber')}
                 type="text"
                 id="gstNumber"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="Enter your 15-digit GST number"
               />
               {errors.gstNumber && (
-                <p className="text-red-600 text-sm mt-2">{errors.gstNumber.message}</p>
+                <p className="text-red-600 text-sm">{errors.gstNumber.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="businessType" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="businessType" className="block text-sm font-semibold text-primary-text">
                 Business Type
               </label>
               <select
                 {...register('businessType')}
                 id="businessType"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
               >
                 <option value="">Select business type</option>
                 <option value="individual">Individual</option>
@@ -329,60 +347,60 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
                 <option value="proprietorship">Proprietorship</option>
               </select>
               {errors.businessType && (
-                <p className="text-red-600 text-sm mt-2">{errors.businessType.message}</p>
+                <p className="text-red-600 text-sm">{errors.businessType.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="businessAddress" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="businessAddress" className="block text-sm font-semibold text-primary-text">
                 Business Address
               </label>
               <textarea
                 {...register('businessAddress')}
                 id="businessAddress"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
                 rows={3}
                 placeholder="Enter your complete business address"
               />
               {errors.businessAddress && (
-                <p className="text-red-600 text-sm mt-2">{errors.businessAddress.message}</p>
+                <p className="text-red-600 text-sm">{errors.businessAddress.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-semibold text-primary-text">
                 Email
               </label>
               <input
                 {...register('email')}
                 type="email"
                 id="email"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="Enter your email"
               />
               {errors.email && (
-                <p className="text-red-600 text-sm mt-2">{errors.email.message}</p>
+                <p className="text-red-600 text-sm">{errors.email.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="phone" className="block text-sm font-semibold text-primary-text">
                 Phone Number
               </label>
               <input
                 {...register('phone')}
                 type="tel"
                 id="phone"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="Enter your phone number"
               />
               {errors.phone && (
-                <p className="text-red-600 text-sm mt-2">{errors.phone.message}</p>
+                <p className="text-red-600 text-sm">{errors.phone.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-primary-text">
                 Password
               </label>
               <div className="relative">
@@ -390,7 +408,7 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
-                  className="auth-input pr-12"
+                  className="auth-input pr-12 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   placeholder="Create a strong password"
                 />
                 <button
@@ -406,30 +424,30 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
                 </button>
               </div>
               {errors.password && (
-                <p className="text-red-600 text-sm mt-2">{errors.password.message}</p>
+                <p className="text-red-600 text-sm">{errors.password.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-primary-text mb-2">
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-primary-text">
                 Confirm Password
               </label>
               <input
                 {...register('confirmPassword')}
                 type="password"
                 id="confirmPassword"
-                className="auth-input"
+                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                 placeholder="Confirm your password"
               />
               {errors.confirmPassword && (
-                <p className="text-red-600 text-sm mt-2">{errors.confirmPassword.message}</p>
+                <p className="text-red-600 text-sm">{errors.confirmPassword.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={isLoading || signUpSuccess}
-              className="auth-button disabled:opacity-50 disabled:cursor-not-allowed"
+              className="auth-button w-full py-4 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 font-semibold text-lg"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -447,20 +465,12 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
             </button>
           </form>
 
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border-light" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-text-muted">Already have an account?</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">Already have an account?</p>
               <button
                 onClick={openSignInModal}
-                className="auth-secondary-button block text-center"
+                className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-colors"
               >
                 Sign in instead
               </button>

@@ -1,10 +1,8 @@
 -- =====================================================
--- COMPLETE WORKING DATABASE SETUP - GUARANTEED TO WORK
--- =====================================================
--- Run this in Supabase SQL Editor - it will create everything needed
+-- ECOMMERCE DATABASE SETUP - NO SUPABASE AUTH
 -- =====================================================
 
--- STEP 1: DROP EXISTING TABLE IF EXISTS (to avoid conflicts)
+-- STEP 1: DROP EXISTING TABLES IF THEY EXIST
 -- =====================================================
 DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS product_categories CASCADE;
@@ -19,7 +17,7 @@ CREATE TABLE products (
   price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
   stock INTEGER NOT NULL CHECK (stock >= 0),
   image_url TEXT,
-  seller_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  seller_id UUID REFERENCES sellers(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -64,7 +62,7 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 -- Policy for sellers to manage their own products
 CREATE POLICY "Sellers can manage their own products" 
 ON products FOR ALL 
-USING (auth.uid() = seller_id);
+USING (seller_id IN (SELECT id FROM sellers WHERE id = seller_id));
 
 -- Policy for public to view all products
 CREATE POLICY "Public can view all products" 
@@ -73,7 +71,7 @@ USING (true);
 
 -- STEP 8: CREATE TRIGGER FUNCTION FOR UPDATED_AT
 -- =====================================================
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION update_products_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
@@ -86,7 +84,7 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_products_updated_at 
   BEFORE UPDATE ON products 
   FOR EACH ROW 
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION update_products_updated_at();
 
 -- STEP 10: GRANT PERMISSIONS
 -- =====================================================
@@ -123,9 +121,12 @@ SELECT 'Categories count:' as info, COUNT(*) as count FROM product_categories;
 SELECT 'RLS policies count:' as info, COUNT(*) as count 
 FROM pg_policies WHERE tablename = 'products';
 
--- =====================================================
--- SETUP COMPLETE! 
--- =====================================================
--- If you see all ✅ marks above, everything is working
--- Now test your Add New Product form!
--- =====================================================
+-- Check seller reference
+SELECT 'Seller reference check:' as info,
+       CASE WHEN EXISTS (
+         SELECT 1 FROM information_schema.table_constraints 
+         WHERE table_name = 'products' 
+         AND constraint_type = 'FOREIGN KEY'
+         AND constraint_name LIKE '%seller_id%'
+       ) THEN '✅ YES - Foreign key to sellers table exists' 
+       ELSE '❌ NO - Foreign key missing' END as status;
