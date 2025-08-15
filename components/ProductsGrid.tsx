@@ -171,9 +171,9 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
                 description: product.description,
                 price: product.price,
                 image_url: product.image_url,
-                rating: 4.5,
-                reviewCount: 0,
-                brand: product.category,
+                rating: product.rating || 4.5,
+                reviewCount: product.reviewCount || 0,
+                brand: product.brand || product.category,
                 inStock: product.stock > 0,
                 created_at: product.created_at || new Date().toISOString()
               }}

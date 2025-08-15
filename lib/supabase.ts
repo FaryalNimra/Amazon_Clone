@@ -164,7 +164,9 @@ export interface Product {
   id: string
   name: string
   description: string
+  category: string
   price: number
+  stock: number
   originalPrice?: number
   image_url: string // Updated to match database schema (was 'image')
   rating: number
