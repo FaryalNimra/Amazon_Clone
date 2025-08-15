@@ -171,11 +171,10 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
                 description: product.description,
                 price: product.price,
                 image_url: product.image_url,
-                rating: product.rating || 4.5,
-                reviewCount: product.reviewCount || 0,
-                brand: product.brand || product.category,
-                inStock: product.stock > 0,
-                created_at: product.created_at || new Date().toISOString()
+                rating: 4.5,
+                reviewCount: 0,
+                brand: product.category,
+                inStock: product.stock > 0
               }}
               className="w-full"
               disabled={product.stock === 0}
