@@ -142,6 +142,10 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
               {product.name}
             </h3>
             
+            <div className="text-xs text-gray-500 mb-2">
+              Brand: {product.brand}
+            </div>
+            
             <p className="text-gray-600 text-sm mb-3 line-clamp-2">
               {product.description}
             </p>
@@ -153,8 +157,8 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
               </span>
               <div className="flex items-center text-sm text-gray-500">
                 <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                <span>4.5</span>
-                <span className="ml-1">(0)</span>
+                <span>{product.rating}</span>
+                <span className="ml-1">({product.reviewCount})</span>
               </div>
             </div>
             

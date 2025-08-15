@@ -151,12 +151,13 @@ export interface Product {
   name: string
   description: string
   price: number
+  stock: number
+  category: string
   originalPrice?: number
   image_url: string // Updated to match database schema (was 'image')
   rating: number
   reviewCount: number
   brand: string
-  stock: number
   inStock: boolean
   discount?: number
   created_at: string
