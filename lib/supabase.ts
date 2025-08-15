@@ -156,6 +156,7 @@ export interface Product {
   rating: number
   reviewCount: number
   brand: string
+  stock: number
   inStock: boolean
   discount?: number
   created_at: string
