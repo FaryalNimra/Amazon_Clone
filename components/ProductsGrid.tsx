@@ -192,6 +192,7 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
           </div>
         </div>
       ))}
+      </div>
     </div>
   )
 }
