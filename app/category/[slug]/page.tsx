@@ -141,7 +141,8 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
           reviewCount: product.review_count || 0,
           brand: product.brand || product.category || 'Unknown',
           inStock: product.in_stock !== false, // Default to true if not specified
-          discount: product.discount || 0
+          discount: product.discount || 0,
+          created_at: product.created_at || new Date().toISOString()
         })) || []
 
         console.log('Transformed products:', transformedProducts)
@@ -367,7 +368,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
         case 'rating':
           return b.rating - a.rating
         case 'newest':
-          return b.id - a.id
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         default:
           return b.reviewCount - a.reviewCount
       }

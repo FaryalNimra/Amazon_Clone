@@ -172,6 +172,7 @@ export interface Product {
   brand: string
   inStock: boolean
   discount?: number
+  created_at: string
 }
 
 // User profile types

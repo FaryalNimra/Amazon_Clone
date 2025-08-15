@@ -3,17 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { ShoppingCart, Star, Heart, RefreshCw } from 'lucide-react'
 import AddToCartButton from './AddToCartButton'
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  stock: number
-  image_url: string
-  category: string
-  created_at: string
-}
+import { Product } from '@/lib/supabase'
 
 interface ProductsGridProps {
   category?: string
