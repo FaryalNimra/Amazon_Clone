@@ -8,6 +8,7 @@ export default function TestSignupPage() {
   const [loading, setLoading] = useState(false)
   const { userRole, userProfile, signOut } = useAuth()
   const [authStatus, setAuthStatus] = useState<string>('Not signed in')
+  const [localStorageData, setLocalStorageData] = useState<string | null>(null)
 
   // Monitor auth status changes
   useEffect(() => {
@@ -17,6 +18,13 @@ export default function TestSignupPage() {
       setAuthStatus('Not signed in')
     }
   }, [userRole, userProfile])
+
+  // Safely access localStorage on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setLocalStorageData(localStorage.getItem('userData'))
+    }
+  }, [])
 
   const testSignOut = async () => {
     setLoading(true)
@@ -36,6 +44,9 @@ export default function TestSignupPage() {
       // Check final state
       const finalUserData = localStorage.getItem('userData')
       console.log('🧪 Test: Final user data:', finalUserData)
+      
+      // Update local state
+      setLocalStorageData(finalUserData)
       
       setTestResult({
         status: 'SIGNOUT_TEST',
@@ -208,14 +219,18 @@ export default function TestSignupPage() {
             )}
             
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  setLocalStorageData(localStorage.getItem('userData'))
+                }
+              }}
               className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
             >
-              Force Page Refresh
+              Refresh Local Storage Data
             </button>
             
             <div className="text-xs text-gray-500">
-              💡 Use "Force Page Refresh" to verify that the navbar state persists correctly after a manual refresh
+              💡 Use "Refresh Local Storage Data" to manually update the displayed localStorage values
             </div>
           </div>
         </div>
@@ -228,7 +243,7 @@ export default function TestSignupPage() {
             <div>
               <span className="font-medium">Local Storage User Data: </span>
               <span className="text-sm text-gray-600">
-                {localStorage.getItem('userData') ? 'Present' : 'None'}
+                {localStorageData ? 'Present' : 'None'}
               </span>
             </div>
             
@@ -266,9 +281,9 @@ export default function TestSignupPage() {
             <div className="flex justify-between">
               <span className="font-medium">Local Storage:</span>
               <span className={`px-2 py-1 rounded text-xs ${
-                localStorage.getItem('userData') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                localStorageData ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
               }`}>
-                {localStorage.getItem('userData') ? '✅ Has Data' : '❌ Empty'}
+                {localStorageData ? '✅ Has Data' : '❌ Empty'}
               </span>
             </div>
             
