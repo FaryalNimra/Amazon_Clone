@@ -134,7 +134,9 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
           id: product.id,
           name: product.name,
           description: product.description,
+          category: product.category || 'Unknown',
           price: product.price,
+          stock: product.stock || 0,
           originalPrice: product.original_price,
           image_url: product.image_url || product.image, // Handle both column names
           rating: product.rating || 4.0,
