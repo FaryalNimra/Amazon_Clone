@@ -10,7 +10,7 @@ const TestCartPage = () => {
 
   const testProducts: Product[] = [
     {
-      id: 1,
+      id: '1',
       name: 'Test Product 1',
       description: 'This is a test product for cart functionality',
       price: 29.99,
@@ -18,10 +18,11 @@ const TestCartPage = () => {
       rating: 4.5,
       reviewCount: 100,
       brand: 'Test Brand',
-      inStock: true
+      inStock: true,
+      created_at: new Date().toISOString()
     },
     {
-      id: 2,
+      id: '2',
       name: 'Test Product 2',
       description: 'Another test product for cart functionality',
       price: 49.99,
@@ -29,7 +30,8 @@ const TestCartPage = () => {
       rating: 4.8,
       reviewCount: 200,
       brand: 'Test Brand',
-      inStock: true
+      inStock: true,
+      created_at: new Date().toISOString()
     }
   ]
 

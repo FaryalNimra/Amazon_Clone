@@ -179,7 +179,8 @@ const TodaysDeals: React.FC = () => {
                     reviewCount: 0,
                     brand: deal.category,
                     inStock: true,
-                    discount: deal.discountPercentage
+                    discount: deal.discountPercentage,
+                    created_at: new Date().toISOString()
                   }}
                   className="w-full"
                   disabled={false}

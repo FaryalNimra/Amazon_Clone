@@ -429,7 +429,8 @@ export default function Home() {
                       rating: product.rating,
                       reviewCount: product.reviewCount,
                       brand: product.category,
-                      inStock: true
+                      inStock: true,
+                      created_at: new Date().toISOString()
                     }}
                     className="w-full"
                   />
