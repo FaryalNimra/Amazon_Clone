@@ -88,6 +88,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           console.log('🔄 AuthContext: No userData found in localStorage')
+          // Clear user state if no data in localStorage
+          setUser(null)
+          setUserRole(null)
+          setUserProfile(null)
         }
       }
     }
@@ -104,12 +108,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for custom events
     window.addEventListener('userDataChanged', handleStorageChange)
     window.addEventListener('storage', handleStorageChange)
+    
+    // Add a periodic check to ensure sync (every 2 seconds)
+    const intervalId = setInterval(() => {
+      const storedUserData = localStorage.getItem('userData')
+      const currentUserExists = user !== null
+      const storedUserExists = storedUserData && storedUserData !== 'null'
+      
+      // If there's a mismatch, sync
+      if (currentUserExists !== storedUserExists) {
+        console.log('🔄 AuthContext: Periodic sync detected mismatch, syncing...')
+        syncUserFromLocalStorage()
+      }
+    }, 2000)
 
     return () => {
       window.removeEventListener('userDataChanged', handleStorageChange)
       window.removeEventListener('storage', handleStorageChange)
+      clearInterval(intervalId)
     }
-  }, [])
+  }, [user]) // Add user as dependency to prevent stale closures
 
   // Helper function to get user role from metadata
   const getUserRole = () => {

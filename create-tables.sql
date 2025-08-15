@@ -1,9 +1,3 @@
--- =====================================================
--- ECOMMERCE DATABASE SETUP - NO SUPABASE AUTH
--- =====================================================
-
--- STEP 1: DROP EXISTING TABLES IF THEY EXIST
--- =====================================================
 DROP TABLE IF EXISTS products CASCADE;
 DROP TABLE IF EXISTS product_categories CASCADE;
 
@@ -21,6 +15,7 @@ CREATE TABLE products (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
 
 -- STEP 3: CREATE INDEXES FOR PERFORMANCE
 -- =====================================================

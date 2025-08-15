@@ -337,6 +337,9 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
       router.push(`/category/electronics?search=${encodeURIComponent(searchQuery)}`)
       setSearchQuery('')
       setSearchResults([])
+      
+      // Reload page after search to show browser loading spinner
+      window.location.reload()
     }
   }
 
@@ -355,12 +358,18 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
     if (searchQuery.trim()) {
       searchProducts(searchQuery, category)
     }
+    
+    // Reload page after category selection to show browser loading spinner
+    window.location.reload()
   }
 
   const handleProductClick = (productId: number) => {
     router.push(`/category/electronics?product=${productId}`)
     setSearchQuery('')
     setSearchResults([])
+    
+    // Reload page after product click to show browser loading spinner
+    window.location.reload()
   }
 
   const handleSignOut = async () => {
@@ -379,6 +388,9 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
       
       console.log('✅ Navbar: Sign out completed successfully')
       
+      // Reload page after successful sign out to show browser loading spinner
+      window.location.reload()
+      
     } catch (error) {
       console.error('❌ Navbar: Error during sign out:', error)
       // Even if there's an error, clear local state
@@ -394,6 +406,9 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
           detail: { timestamp: Date.now() }
         }))
       }
+      
+      // Reload page even on error to ensure clean state
+      window.location.reload()
     }
   }
 
@@ -530,14 +545,22 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
             </button>
 
             {/* Cart */}
-            <Link href={getCartUrl()} className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
+            <button
+              onClick={() => {
+                console.log('🛒 Cart icon clicked, navigating to cart...')
+                const cartUrl = getCartUrl()
+                console.log('🛒 Cart URL:', cartUrl)
+                router.push(cartUrl)
+              }}
+              className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
+            >
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-primary-red text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
-            </Link>
+            </button>
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">

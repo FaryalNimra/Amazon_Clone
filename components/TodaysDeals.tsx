@@ -169,7 +169,7 @@ const TodaysDeals: React.FC = () => {
                 {/* Add to Cart Button */}
                 <AddToCartButton
                   product={{
-                    id: parseInt(deal.id),
+                    id: deal.id,
                     name: deal.name,
                     description: `${deal.name} - ${deal.category}`,
                     price: deal.discountedPrice,

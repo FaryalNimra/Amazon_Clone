@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
-import { ShoppingCart, Loader2, AlertCircle, X } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { ShoppingCart, Loader2, AlertCircle, X, CheckCircle } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useModal } from '@/contexts/ModalContext'
@@ -28,19 +28,39 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
   const { addToCart, buttonLoadingStates } = useCart()
   const { openSignInModal } = useModal()
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
 
   const isLoading = buttonLoadingStates[product.id.toString()] || false
   const isDisabled = disabled || isLoading
 
-  // Debug logging
+  // Enhanced debugging
   console.log('🛒 AddToCartButton Debug:', {
     productId: product.id,
     productName: product.name,
     user: user,
     userRole: getUserRole(),
     isDisabled: isDisabled,
-    showAuthModal: showAuthModal
+    showAuthModal: showAuthModal,
+    localStorageUserData: typeof window !== 'undefined' ? localStorage.getItem('userData') : 'N/A',
+    userState: user ? 'User exists' : 'No user',
+    userRoleState: getUserRole()
   })
+
+  // Check localStorage directly for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('userData')
+      console.log('🛒 AddToCartButton: localStorage userData:', storedUser)
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser)
+          console.log('🛒 AddToCartButton: Parsed userData:', parsed)
+        } catch (e) {
+          console.error('🛒 AddToCartButton: Error parsing userData:', e)
+        }
+      }
+    }
+  }, [user])
 
   const handleAddToCart = async () => {
     console.log('🛒 AddToCartButton: handleAddToCart called')
@@ -57,6 +77,9 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     // User is authenticated, proceed with adding to cart
     try {
       await addToCart(product, product.id?.toString() || 'unknown')
+      // Show success toast
+      setShowSuccessToast(true)
+      setTimeout(() => setShowSuccessToast(false), 3000) // Hide after 3 seconds
     } catch (error) {
       console.error('Error adding to cart:', error)
     }
@@ -92,6 +115,73 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
     </>
   )
 
+  // If user is not authenticated, show sign-in message instead of button
+  if (!user) {
+    // Double-check localStorage to see if user data exists
+    const storedUserData = typeof window !== 'undefined' ? localStorage.getItem('userData') : null
+    const hasStoredUser = storedUserData && storedUserData !== 'null'
+    
+    console.log('🛒 AddToCartButton: No user in context, checking localStorage:', {
+      storedUserData,
+      hasStoredUser,
+      user
+    })
+    
+    // If there's stored user data but no user in context, there might be a sync issue
+    if (hasStoredUser) {
+      console.log('🛒 AddToCartButton: Found stored user data but no user in context - sync issue detected')
+      
+      // Add a manual refresh button for debugging
+      return (
+        <div className={`${className} text-center`}>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center justify-center space-x-2 text-yellow-600 mb-3">
+              <ShoppingCart className="w-4 h-4" />
+              <span className="text-sm font-medium">Authentication sync issue detected</span>
+            </div>
+            <div className="text-xs text-yellow-600 mb-3">
+              User data found in localStorage but not in context. This might be a sync issue.
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered')
+                  window.location.reload()
+                }}
+                className="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Refresh Page
+              </button>
+              <button
+                onClick={openSignInModal}
+                className="w-full bg-primary-red hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                Sign In Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    
+    return (
+      <div className={`${className} text-center`}>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-center space-x-2 text-gray-600">
+            <ShoppingCart className="w-4 h-4" />
+            <span className="text-sm font-medium">Sign in to add items to your cart</span>
+          </div>
+          <button
+            onClick={openSignInModal}
+            className="mt-3 w-full bg-primary-red hover:bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       <button
@@ -115,6 +205,33 @@ const AddToCartButton: React.FC<AddToCartButtonProps> = ({
           children || defaultContent
         )}
       </button>
+
+      {/* Success Toast */}
+      {showSuccessToast && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg max-w-sm">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-green-800">
+                  {product.name} added to cart!
+                </p>
+              </div>
+              <div className="ml-auto pl-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSuccessToast(false)}
+                  className="inline-flex text-green-400 hover:text-green-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Simple Authentication Required Modal - Center of screen */}
       {showAuthModal && (

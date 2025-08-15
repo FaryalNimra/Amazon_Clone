@@ -421,7 +421,7 @@ export default function Home() {
                   {/* Add to Cart Button */}
                   <AddToCartButton
                     product={{
-                      id: Date.now() + Math.random(), // Generate unique ID
+                      id: (Date.now() + Math.random()).toString(), // Generate unique string ID
                       name: product.name,
                       description: `${product.name} - ${product.category}`,
                       price: product.price,

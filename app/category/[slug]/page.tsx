@@ -18,11 +18,14 @@ import {
   X
 } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { Product, supabase } from '@/lib/supabase'
 import { useCartNavigation } from '@/hooks/useCartNavigation'
+import AddToCartButton from '@/components/AddToCartButton'
 
 const CategoryPage = ({ params }: { params: { slug: string } }) => {
-  const { addToCart, loading: cartLoading } = useCart()
+  const { addToCart } = useCart()
+  const { user } = useAuth()
   const { getCartUrl } = useCartNavigation()
   const [sortBy, setSortBy] = useState('popularity')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -136,7 +139,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
           image_url: product.image_url || product.image, // Handle both column names
           rating: product.rating || 4.0,
           reviewCount: product.review_count || 0,
-          brand: product.brand || 'Unknown',
+          brand: product.brand || product.category || 'Unknown',
           inStock: product.in_stock !== false, // Default to true if not specified
           discount: product.discount || 0
         })) || []
@@ -375,19 +378,6 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
-
-  const handleAddToCart = async (product: Product) => {
-    try {
-      await addToCart(product, product.id.toString())
-    } catch (error: any) {
-      if (error.message === 'Authentication required to add items to cart') {
-        // Show authentication required message
-        alert('Please sign in to add items to your cart.')
-      } else {
-        console.error('Error adding to cart:', error)
-      }
-    }
-  }
 
   const handleCategoryToggle = (category: string) => {
     setSelectedCategories(prev => 
@@ -722,16 +712,11 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                       </span>
                     </div>
                     
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      disabled={!product.inStock || cartLoading}
-                      className="w-full bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white py-2 px-4 rounded-md transition-colors flex items-center justify-center space-x-2"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      <span>
-                        {cartLoading ? 'Adding...' : 'Add to Cart'}
-                      </span>
-                    </button>
+                    <AddToCartButton
+                      product={product}
+                      className="w-full"
+                      disabled={!product.inStock}
+                    />
                   </div>
                 </div>
               ))}

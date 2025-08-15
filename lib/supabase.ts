@@ -146,13 +146,13 @@ export const updateUserProfile = async (
 
 // Cart table types
 export interface CartItem {
-  id?: number
+  id?: string
   user_id: string
-  product_id: number
+  product_id: string
   quantity: number
   added_at?: string
   product?: {
-    id: number
+    id: string
     name: string
     price: number
     image_url: string // Updated to match database schema
@@ -161,7 +161,7 @@ export interface CartItem {
 }
 
 export interface Product {
-  id: number
+  id: string
   name: string
   description: string
   price: number

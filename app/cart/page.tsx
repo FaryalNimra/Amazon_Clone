@@ -60,28 +60,7 @@ const CartPage = () => {
     )
   }
 
-  if (cartItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-            <p className="text-gray-600 mb-6">Add some products to get started</p>
-            <button
-              onClick={() => router.push('/')}
-              className="bg-primary-red hover:bg-red-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-flex items-center"
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Continue Shopping
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const handleQuantityChange = async (productId: number, newQuantity: number) => {
+  const handleQuantityChange = async (productId: string, newQuantity: number) => {
     if (newQuantity < 1) return
     try {
       await updateQuantity(productId, newQuantity)
@@ -94,7 +73,7 @@ const CartPage = () => {
     }
   }
 
-  const handleRemoveItem = async (productId: number) => {
+  const handleRemoveItem = async (productId: string) => {
     if (confirm('Are you sure you want to remove this item from your cart?')) {
       try {
         await removeFromCart(productId)
@@ -130,7 +109,7 @@ const CartContent = () => {
   const { cartItems, cartTotal, loading, updateQuantity, removeFromCart, clearCart } = useCart()
   const router = useRouter()
 
-  const handleQuantityChange = async (productId: number, newQuantity: number) => {
+  const handleQuantityChange = async (productId: string, newQuantity: number) => {
     if (newQuantity < 1) return
     try {
       await updateQuantity(productId, newQuantity)
@@ -143,7 +122,7 @@ const CartContent = () => {
     }
   }
 
-  const handleRemoveItem = async (productId: number) => {
+  const handleRemoveItem = async (productId: string) => {
     if (confirm('Are you sure you want to remove this item from your cart?')) {
       try {
         await removeFromCart(productId)

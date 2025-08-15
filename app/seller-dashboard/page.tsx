@@ -474,6 +474,14 @@ const SellerDashboard: React.FC = () => {
       
       // Refresh products list to show the newly added product
       fetchProducts()
+      
+      // Show loading effect and refresh data instead of full page reload
+      // This keeps user on the same tab while showing loading spinner
+      setProductsLoading(true)
+      setTimeout(() => {
+        fetchProducts()
+        setProductsLoading(false)
+      }, 500)
 
     } catch (error: any) {
       console.error('❌ Error adding product:', error)
@@ -725,6 +733,14 @@ const SellerDashboard: React.FC = () => {
 
       // Auto-hide success toast after 3 seconds
       setTimeout(() => setShowSuccessToast(false), 3000)
+      
+      // Show loading effect and refresh data instead of full page reload
+      // This keeps user on the same tab while showing loading spinner
+      setProductsLoading(true)
+      setTimeout(() => {
+        fetchProducts()
+        setProductsLoading(false)
+      }, 500)
 
     } catch (error: any) {
       console.error('❌ Error updating product:', error)
@@ -779,6 +795,14 @@ const SellerDashboard: React.FC = () => {
 
       // Auto-hide success toast after 3 seconds
       setTimeout(() => setShowSuccessToast(false), 3000)
+      
+      // Show loading effect and refresh data instead of full page reload
+      // This keeps user on the same tab while showing loading spinner
+      setProductsLoading(true)
+      setTimeout(() => {
+        fetchProducts()
+        setProductsLoading(false)
+      }, 500)
 
     } catch (error: any) {
       console.error('❌ Error deleting product:', error)

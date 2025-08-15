@@ -176,7 +176,7 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
             {/* Add to Cart Button */}
             <AddToCartButton
               product={{
-                id: parseInt(product.id),
+                id: product.id,
                 name: product.name,
                 description: product.description,
                 price: product.price,

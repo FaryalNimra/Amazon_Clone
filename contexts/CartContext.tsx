@@ -9,8 +9,8 @@ interface CartContextType {
   cartCount: number
   cartTotal: number
   addToCart: (product: Product, productId?: string) => Promise<void>
-  updateQuantity: (productId: number, quantity: number) => Promise<void>
-  removeFromCart: (productId: number) => Promise<void>
+  updateQuantity: (productId: string, quantity: number) => Promise<void>
+  removeFromCart: (productId: string) => Promise<void>
   clearCart: () => Promise<void>
   loading: boolean
   buttonLoadingStates: { [key: string]: boolean }
@@ -66,52 +66,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [cartItems, user])
 
-  // Load cart from database when user is authenticated
-  useEffect(() => {
-    if (user) {
-      // Merge local cart with database cart when user signs in
-      mergeLocalCartWithDatabase()
-    }
-  }, [user])
-
-  const mergeLocalCartWithDatabase = async () => {
-    if (!user) return
-
-    try {
-      // Since we no longer support anonymous users, just fetch from database
-      await fetchCartFromDatabase()
-    } catch (error) {
-      console.error('Error fetching cart from database:', error)
-    }
-  }
-
-  const fetchCartFromDatabase = async () => {
-    if (!user) return
-
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('cart')
-        .select(`
-          *,
-          product:products(*)
-        `)
-        .eq('user_id', user.id)
-        .order('added_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching cart from database:', error)
-        return
-      }
-
-      // Update local state with database data
-      setCartItems(data || [])
-    } catch (error) {
-      console.error('Error fetching cart from database:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Remove database cart loading for now - using localStorage only
+  // TODO: Re-enable when cart table is set up
 
   const setButtonLoading = (productId: string, loading: boolean) => {
     setButtonLoadingStates(prev => ({
@@ -133,36 +89,26 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // Check if product already exists in cart
-      const existingItem = cartItems.find(item => item.product_id === product.id)
+      const existingItem = cartItems.find(item => item.product_id === product.id.toString())
 
       if (existingItem) {
         // Update quantity locally
         const newQuantity = existingItem.quantity + 1
         const updatedCart = cartItems.map(item => 
-          item.product_id === product.id 
+          item.product_id === product.id.toString()
             ? { ...item, quantity: newQuantity }
             : item
         )
         setCartItems(updatedCart)
-
-        // Store in database
-        const { error } = await supabase
-          .from('cart')
-          .update({ quantity: newQuantity })
-          .eq('user_id', user.id)
-          .eq('product_id', product.id)
-
-        if (error) {
-          console.error('Error updating cart in database:', error)
-        }
+        console.log('✅ Cart updated successfully (localStorage only)')
       } else {
         // Create new cart item
         const newCartItem: CartItem = {
           user_id: user.id,
-          product_id: product.id,
+          product_id: product.id.toString(),
           quantity: 1,
           product: {
-            id: product.id,
+            id: product.id.toString(),
             name: product.name,
             price: product.price,
             image_url: product.image_url,
@@ -172,20 +118,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Add to local state immediately
         setCartItems(prev => [...prev, newCartItem])
-
-        // Store in database
-        const { error } = await supabase
-          .from('cart')
-          .insert({
-            user_id: user.id,
-            product_id: product.id,
-            quantity: 1
-          })
-
-        if (error) {
-          console.error('Error adding to cart in database:', error)
-        }
+        console.log('✅ Product added to cart successfully (localStorage only)')
       }
+      
+      // Note: Database cart table not set up yet - using localStorage fallback
+      // TODO: Enable database storage once cart table is created
       
     } catch (error) {
       console.error('Error adding to cart:', error)
@@ -195,7 +132,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const updateQuantity = async (productId: number, quantity: number) => {
+  const updateQuantity = async (productId: string, quantity: number) => {
     // Check if user is authenticated
     if (!user) {
       throw new Error('Authentication required to update cart')
@@ -211,7 +148,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update local state immediately
       setCartItems(prev => 
         prev.map(item => 
-          item.product_id === productId 
+          item.product_id === productId
             ? { ...item, quantity }
             : item
         )
@@ -236,7 +173,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const removeFromCart = async (productId: number) => {
+  const removeFromCart = async (productId: string) => {
     // Check if user is authenticated
     if (!user) {
       throw new Error('Authentication required to remove items from cart')
