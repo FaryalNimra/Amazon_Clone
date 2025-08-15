@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Clock, Tag, ArrowRight } from 'lucide-react'
-import AddToCartButton from './AddToCartButton'
+
 import Link from 'next/link'
 
 interface DealProduct {
@@ -166,24 +166,7 @@ const TodaysDeals: React.FC = () => {
                   You save ${(deal.originalPrice - deal.discountedPrice).toFixed(2)}!
                 </div>
                 
-                {/* Add to Cart Button */}
-                <AddToCartButton
-                  product={{
-                    id: deal.id,
-                    name: deal.name,
-                    description: `${deal.name} - ${deal.category}`,
-                    price: deal.discountedPrice,
-                    originalPrice: deal.originalPrice,
-                    image_url: deal.image,
-                    rating: 4.5,
-                    reviewCount: 0,
-                    brand: deal.category,
-                    inStock: true,
-                    discount: deal.discountPercentage
-                  }}
-                  className="w-full"
-                  disabled={false}
-                />
+
               </div>
             </div>
           ))}

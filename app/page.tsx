@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ShoppingBag, Star, Truck, Shield, Smartphone, Shirt, Home as HomeIcon, BookOpen, Heart, Gamepad2, Car, Trophy, Clock, Tag, ShoppingCart } from 'lucide-react'
+import { ArrowRight, ShoppingBag, Star, Truck, Shield, Smartphone, Shirt, Home as HomeIcon, BookOpen, Heart, Gamepad2, Car, Trophy, Clock, Tag } from 'lucide-react'
 import TodaysDeals from '@/components/TodaysDeals'
-import AddToCartButton from '@/components/AddToCartButton'
+
 import { useAuth } from '@/contexts/AuthContext'
 import { useModal } from '@/contexts/ModalContext'
-import { useCart } from '@/contexts/CartContext'
+
 
 
 export default function Home() {
@@ -418,21 +418,7 @@ export default function Home() {
                     </span>
                   </div>
                   
-                  {/* Add to Cart Button */}
-                  <AddToCartButton
-                    product={{
-                      id: (Date.now() + Math.random()).toString(), // Generate unique string ID
-                      name: product.name,
-                      description: `${product.name} - ${product.category}`,
-                      price: product.price,
-                      image_url: product.image,
-                      rating: product.rating,
-                      reviewCount: product.reviewCount,
-                      brand: product.category,
-                      inStock: true
-                    }}
-                    className="w-full"
-                  />
+
                 </div>
               </div>
             ))}

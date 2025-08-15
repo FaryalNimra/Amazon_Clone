@@ -144,21 +144,7 @@ export const updateUserProfile = async (
   }
 }
 
-// Cart table types
-export interface CartItem {
-  id?: string
-  user_id: string
-  product_id: string
-  quantity: number
-  added_at?: string
-  product?: {
-    id: string
-    name: string
-    price: number
-    image_url: string // Updated to match database schema
-    description: string
-  }
-}
+
 
 export interface Product {
   id: string

@@ -6,7 +6,6 @@ import {
   ArrowLeft, 
   ArrowRight, 
   Star, 
-  ShoppingCart, 
   Heart, 
   Filter, 
   ChevronDown,
@@ -17,16 +16,11 @@ import {
   Search,
   X
 } from 'lucide-react'
-import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { Product, supabase } from '@/lib/supabase'
-import { useCartNavigation } from '@/hooks/useCartNavigation'
-import AddToCartButton from '@/components/AddToCartButton'
 
 const CategoryPage = ({ params }: { params: { slug: string } }) => {
-  const { addToCart } = useCart()
   const { user } = useAuth()
-  const { getCartUrl } = useCartNavigation()
   const [sortBy, setSortBy] = useState('popularity')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
@@ -625,14 +619,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
               </div>
               
               <div className="flex items-center space-x-4">
-                {/* View Cart Button */}
-                <Link
-                  href={getCartUrl()}
-                  className="flex items-center space-x-2 bg-primary-red hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span className="text-sm font-medium">View Cart</span>
-                </Link>
+
                 
                 {/* View Mode Toggle */}
                 <div className="flex items-center bg-white rounded-lg shadow-sm p-1">
@@ -713,11 +700,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                       </span>
                     </div>
                     
-                    <AddToCartButton
-                      product={product}
-                      className="w-full"
-                      disabled={!product.inStock}
-                    />
+
                   </div>
                 </div>
               ))}

@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { ShoppingCart, Star, Heart, RefreshCw } from 'lucide-react'
-import AddToCartButton from './AddToCartButton'
+import { Star, Heart, RefreshCw } from 'lucide-react'
+
 import { Product } from '@/lib/supabase'
 
 interface ProductsGridProps {
@@ -163,22 +163,7 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
               Stock: {product.stock} units
             </div>
             
-            {/* Add to Cart Button */}
-            <AddToCartButton
-              product={{
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                price: product.price,
-                image_url: product.image_url,
-                rating: 4.5,
-                reviewCount: 0,
-                brand: product.category,
-                inStock: product.stock > 0
-              }}
-              className="w-full"
-              disabled={product.stock === 0}
-            />
+
           </div>
         </div>
       ))}

@@ -4,7 +4,7 @@ import './globals.css'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ModalProvider } from '@/contexts/ModalContext'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { CartProvider } from '@/contexts/CartContext'
+
 import LayoutWrapper from '@/components/LayoutWrapper'
 import SignUpModalWrapper from '@/components/SignUpModalWrapper'
 import SignInModalWrapper from '@/components/SignInModalWrapper'
@@ -30,7 +30,6 @@ export default function RootLayout({
         <ThemeProvider>
           <ModalProvider>
             <AuthProvider>
-              <CartProvider>
                 <ScrollToTopWrapper>
                   <LayoutWrapper>
                     {children}
@@ -40,7 +39,6 @@ export default function RootLayout({
                 <SignUpModalWrapper />
                 <SignInModalWrapper />
                 <SellerModalWrapper />
-              </CartProvider>
             </AuthProvider>
           </ModalProvider>
         </ThemeProvider>
