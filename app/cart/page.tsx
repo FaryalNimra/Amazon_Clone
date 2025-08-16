@@ -127,7 +127,6 @@ export default function CartPage() {
                             <AddToCartButton
                               product={item}
                               size="sm"
-                              showQuantity={true}
                             />
                           </div>
                           
