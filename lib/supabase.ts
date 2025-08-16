@@ -160,6 +160,7 @@ export interface Product {
   brand: string
   inStock: boolean
   discount?: number
+  seller_id: string
   created_at: string
 }
 

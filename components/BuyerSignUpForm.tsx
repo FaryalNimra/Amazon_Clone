@@ -76,10 +76,44 @@ const BuyerSignUpForm: React.FC<BuyerSignUpFormProps> = ({ onClose }) => {
         if (data && data.length > 0) {
           console.log('✅ Buyer data stored successfully in buyers table:', data[0])
           
-          // Create a simple user session (you can implement your own session management)
+          // Create a simple user session and store in localStorage
           const buyerData = data[0]
           console.log('🎉 Buyer account created successfully!')
           console.log('📝 Buyer data:', buyerData)
+          
+          // Store buyer data in localStorage for session management
+          const userData = {
+            id: buyerData.id,
+            name: buyerData.name,
+            email: buyerData.email,
+            phone: buyerData.phone,
+            role: 'buyer',
+            created_at: buyerData.created_at,
+            updated_at: buyerData.updated_at
+          }
+          
+          console.log('💾 Storing BUYER data in localStorage:', userData)
+          localStorage.setItem('userData', JSON.stringify(userData))
+          
+          // Verify the data was stored correctly
+          const storedData = localStorage.getItem('userData')
+          console.log('✅ Verification - Stored data in localStorage:', storedData)
+          
+          // Dispatch custom event to notify AuthContext of user data change
+          if (typeof window !== 'undefined') {
+            console.log('📡 Dispatching userDataChanged event for BUYER')
+            window.dispatchEvent(new Event('userDataChanged'))
+            
+            // Also trigger a storage event to ensure it's detected
+            setTimeout(() => {
+              console.log('📡 Triggering storage event for BUYER')
+              window.dispatchEvent(new StorageEvent('storage', {
+                key: 'userData',
+                newValue: storedData,
+                oldValue: null
+              }))
+            }, 50)
+          }
           
           setSignUpSuccess(true)
           setShowAccountCreatedModal(true)

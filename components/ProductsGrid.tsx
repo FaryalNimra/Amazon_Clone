@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Star, Heart, RefreshCw } from 'lucide-react'
+import AddToCartButton from './AddToCartButton'
 
 import { Product } from '@/lib/supabase'
 
@@ -167,7 +168,20 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({ category, limit = 12 }) => 
               Stock: {product.stock} units
             </div>
             
-
+            {/* Add to Cart Button */}
+            <AddToCartButton
+              product={{
+                id: product.id.toString(),
+                name: product.name,
+                description: product.description,
+                price: product.price,
+                image_url: product.image_url || '',
+                category: product.category,
+                seller_id: product.seller_id
+              }}
+              className="w-full"
+              size="md"
+            />
           </div>
         </div>
       ))}

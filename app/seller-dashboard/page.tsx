@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useModal } from '@/contexts/ModalContext'
 import { supabase } from '@/lib/supabase'
 import { 
   Store, 
@@ -98,7 +97,6 @@ interface ProductForm {
 
 
 const SellerDashboard: React.FC = () => {
-  const { openSellerSignInModal } = useModal()
   const router = useRouter()
   const [sellerData, setSellerData] = useState<SellerData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -191,7 +189,8 @@ const SellerDashboard: React.FC = () => {
       // Get user from localStorage (custom authentication)
       const storedUser = localStorage.getItem('userData')
       if (!storedUser) {
-        openSellerSignInModal()
+        // No user data, redirect to home page
+        router.push('/?message=Please sign in as a seller to access the dashboard.')
         return
       }
 
@@ -217,16 +216,24 @@ const SellerDashboard: React.FC = () => {
           total_products: 0 // This would come from database in real app
         })
         
+        // Close any open modals when dashboard loads successfully
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('closeAllModals', {
+            detail: { source: 'sellerDashboard' }
+          }))
+        }
+        
         setLoading(false)
       } catch (error) {
         console.error('Error parsing user data:', error)
-        localStorage.removeItem('user')
-        openSellerSignInModal()
+        localStorage.removeItem('userData')
+        // Redirect to home page instead of opening sign-in modal
+        router.push('/?message=Authentication error. Please sign in again.')
       }
     }
 
     checkUserAndRedirect()
-  }, [router, openSellerSignInModal])
+  }, [router])
 
   // Fetch products when user is authenticated
   useEffect(() => {

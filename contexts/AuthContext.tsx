@@ -16,6 +16,7 @@ interface AuthContextType {
   buyerSignIn: (email: string, password: string) => Promise<{ error: string | null }>
   userRole: string | null
   userProfile: any
+  forceSync: () => void
 }
 
 // Interface for localStorage user data
@@ -54,46 +55,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Sync user state with localStorage userData
   useEffect(() => {
     const syncUserFromLocalStorage = () => {
-      console.log('🔄 AuthContext: Syncing user from localStorage...')
       if (typeof window !== 'undefined') {
         const storedUserData = localStorage.getItem('userData')
-        console.log('🔄 AuthContext: Stored userData:', storedUserData)
         
-        if (storedUserData) {
+        if (storedUserData && storedUserData !== 'null' && storedUserData !== 'undefined') {
           try {
             const userData = JSON.parse(storedUserData)
-            console.log('🔄 AuthContext: Parsed userData:', userData)
             
-            // Create a mock User object that matches Supabase User interface
-            const mockUser = {
-              id: userData.id,
-              email: userData.email,
-              role: userData.role,
-              user_metadata: {
-                name: userData.name,
-                role: userData.role
-              },
-              app_metadata: {
-                role: userData.role
-              }
-            } as any
-            
-            console.log('🔄 AuthContext: Created mockUser:', mockUser)
-            setUser(mockUser)
-            setUserRole(userData.role)
-            setUserProfile(userData)
-            console.log('🔄 AuthContext: User state updated successfully')
+            // Validate that userData has required fields
+            if (userData.id && userData.email && userData.role) {
+              // Create a mock User object that matches Supabase User interface
+              const mockUser = {
+                id: userData.id,
+                email: userData.email,
+                role: userData.role,
+                user_metadata: {
+                  name: userData.name,
+                  role: userData.role
+                },
+                app_metadata: {
+                  role: userData.role
+                }
+              } as any
+              
+              // Set user state
+              setUser(mockUser)
+              setUserRole(userData.role)
+              setUserProfile(userData)
+            } else {
+              // Clear invalid user data
+              localStorage.removeItem('userData')
+              setUser(null)
+              setUserRole(null)
+              setUserProfile(null)
+            }
           } catch (error) {
-            console.error('❌ AuthContext: Error parsing userData from localStorage:', error)
+            console.error('Error parsing userData from localStorage:', error)
+            // Clear corrupted user data
+            localStorage.removeItem('userData')
+            setUser(null)
+            setUserRole(null)
+            setUserProfile(null)
           }
         } else {
-          console.log('🔄 AuthContext: No userData found in localStorage')
           // Clear user state if no data in localStorage
           setUser(null)
           setUserRole(null)
           setUserProfile(null)
         }
       }
+      setLoading(false)
     }
 
     // Initial sync
@@ -101,33 +112,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for changes in localStorage
     const handleStorageChange = () => {
-      console.log('🔄 AuthContext: Storage change detected, syncing user...')
       syncUserFromLocalStorage()
     }
 
     // Listen for custom events
-    window.addEventListener('userDataChanged', handleStorageChange)
+    const handleUserDataChanged = (event: Event) => {
+      // Add a small delay to ensure localStorage is updated
+      setTimeout(() => {
+        syncUserFromLocalStorage()
+      }, 100)
+    }
+
+    window.addEventListener('userDataChanged', handleUserDataChanged)
     window.addEventListener('storage', handleStorageChange)
     
-    // Add a periodic check to ensure sync (every 2 seconds)
-    const intervalId = setInterval(() => {
-      const storedUserData = localStorage.getItem('userData')
-      const currentUserExists = user !== null
-      const storedUserExists = storedUserData && storedUserData !== 'null'
-      
-      // If there's a mismatch, sync
-      if (currentUserExists !== storedUserExists) {
-        console.log('🔄 AuthContext: Periodic sync detected mismatch, syncing...')
-        syncUserFromLocalStorage()
-      }
-    }, 2000)
-
     return () => {
-      window.removeEventListener('userDataChanged', handleStorageChange)
+      window.removeEventListener('userDataChanged', handleUserDataChanged)
       window.removeEventListener('storage', handleStorageChange)
-      clearInterval(intervalId)
     }
-  }, [user]) // Add user as dependency to prevent stale closures
+  }, [])
 
   // Helper function to get user role from metadata
   const getUserRole = () => {
@@ -174,16 +177,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // New function for buyer sign in that works with the buyers table
   const buyerSignIn = async (email: string, password: string) => {
     try {
-      console.log('🔐 AuthContext: Starting sign in for:', email)
-      
       // Check if Supabase is initialized
       if (!supabase) {
-        console.error('❌ AuthContext: Supabase not initialized')
         return { error: 'Authentication service not available' }
       }
 
       // First check if user exists in buyers table
-      console.log('🔍 AuthContext: Checking buyers table for user...')
       const { data: buyerData, error: buyerError } = await supabase
         .from('buyers')
         .select('*')
@@ -192,14 +191,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single()
 
       if (buyerError && buyerError.code !== 'PGRST116') {
-        console.error('❌ AuthContext: Buyer table error:', buyerError)
         return { error: 'Database error. Please try again.' }
       }
 
       // If buyer found, sign them in and show account icon
       if (buyerData) {
-        console.log('✅ AuthContext: Buyer found in database:', buyerData)
-        
         // Set user role and profile
         setUserRole('buyer')
         setUserProfile(buyerData)
@@ -215,7 +211,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updated_at: buyerData.updated_at
         }
         
-        console.log('💾 AuthContext: Storing BUYER data in localStorage:', userData)
         localStorage.setItem('userData', JSON.stringify(userData))
         
         // Create mock user object for Supabase compatibility
@@ -237,25 +232,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Dispatch custom event to notify navbar of user data change
         if (typeof window !== 'undefined') {
-          console.log('📡 AuthContext: Dispatching userDataChanged event for BUYER')
           window.dispatchEvent(new Event('userDataChanged'))
         }
         
         // Close all modals
-        console.log('🚪 AuthContext: Closing modals...')
         closeSignInModal()
         closeSellerSignInModal()
         closeSellerSignUpModal()
         
         // Redirect buyer to home page (will show account icon in navbar)
-        console.log('🏠 AuthContext: Redirecting BUYER to home page...')
         router.push('/')
         
         return { error: null }
       }
 
       // If not found in buyers, check sellers table
-      console.log('🔍 AuthContext: User not in buyers table, checking sellers table...')
       const { data: sellerData, error: sellerError } = await supabase
         .from('sellers')
         .select('*')
@@ -264,14 +255,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single()
 
       if (sellerError && sellerError.code !== 'PGRST116') {
-        console.error('❌ AuthContext: Seller table error:', sellerError)
         return { error: 'Database error. Please try again.' }
       }
 
       // If seller found, sign them in and redirect to dashboard
       if (sellerData) {
-        console.log('✅ AuthContext: Seller found in database:', sellerData)
-        
         // Set user role and profile
         setUserRole('seller')
         setUserProfile(sellerData)
@@ -291,7 +279,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updated_at: sellerData.updated_at
         }
         
-        console.log('💾 AuthContext: Storing SELLER data in localStorage:', userData)
         localStorage.setItem('userData', JSON.stringify(userData))
         
         // Create mock user object for Supabase compatibility
@@ -313,173 +300,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Dispatch custom event to notify navbar of user data change
         if (typeof window !== 'undefined') {
-          console.log('📡 AuthContext: Dispatching userDataChanged event for SELLER')
           window.dispatchEvent(new Event('userDataChanged'))
         }
         
         // Automatically redirect seller to dashboard
-        console.log('🏪 AuthContext: Redirecting SELLER to dashboard...')
         router.push('/seller-dashboard')
         
         return { error: null }
       }
 
       // If user not found in either table
-      console.log('❌ AuthContext: User not found in buyers or sellers table')
       return { error: 'Invalid email or password' }
     } catch (err) {
-      console.error('❌ AuthContext: Unexpected sign in error:', err)
+      console.error('Unexpected sign in error:', err)
       return { error: 'An unexpected error occurred' }
     }
   }
 
-  useEffect(() => {
-    // Check if Supabase is initialized
-    if (!supabase) {
-      console.warn('Supabase not initialized, skipping auth setup')
-      setLoading(false)
-      return
-    }
-
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setUser(session?.user ?? null)
-        
-        // If user is logged in, check their role
-        if (session?.user?.email) {
-          const { role, profile } = await checkUserRole(session.user.email)
-          setUserRole(role)
-          setUserProfile(profile)
-          
-          // If seller, redirect to dashboard
-          if (role === 'seller') {
-            router.push('/seller-dashboard')
-          }
-        }
-        
-        setLoading(false)
-      } catch (error) {
-        console.error('Error getting initial session:', error)
-        setLoading(false)
-      }
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: any) => {
-        try {
-          setUser(session?.user ?? null)
-          
-          // Handle auth state changes
-          if (event === 'SIGNED_IN' && session?.user) {
-            console.log('User signed in:', session.user.email)
-            
-            // Check user role from database tables
-            const { role, profile } = await checkUserRole(session.user.email)
-            setUserRole(role)
-            setUserProfile(profile)
-            
-            // Close all modals first
-            closeSignInModal()
-            closeSellerSignInModal()
-            closeSellerSignUpModal()
-            
-            // Check if user is verified using last_sign_in_at
-            if (!session.user.last_sign_in_at) {
-              console.log('User email not verified, redirecting to email verification')
-              try {
-                router.push('/email-verification')
-              } catch (navError) {
-                console.error('Navigation error:', navError)
-              }
-            } else {
-              console.log('User verified, checking role for redirect')
-              
-              if (role === 'seller') {
-                console.log('User is a seller, redirecting to seller dashboard')
-                try {
-                  router.push('/seller-dashboard')
-                } catch (navError) {
-                  console.error('Navigation error:', navError)
-                }
-              } else if (role === 'buyer') {
-                console.log('User is a buyer, redirecting to home page')
-                try {
-                  router.push('/')
-                } catch (navError) {
-                  console.error('Navigation error:', navError)
-                }
-              }
-            }
-          } else if (event === 'SIGNED_OUT') {
-            console.log('User signed out, clearing role and profile')
-            setUserRole(null)
-            setUserProfile(null)
-            localStorage.removeItem('userData')
-            
-            // Dispatch custom event to notify navbar
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new Event('userDataChanged'))
-            }
-            
-            try {
-              router.push('/')
-            } catch (navError) {
-              console.error('Navigation error:', navError)
-            }
-          }
-          
-          setLoading(false)
-        } catch (error) {
-          console.error('Error handling auth state change:', error)
-          setLoading(false)
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [router, closeSignInModal, closeSellerSignInModal, closeSellerSignUpModal])
-
   const signIn = async (email: string, password: string) => {
-    try {
-      // Check if Supabase is initialized
-      if (!supabase) {
-        return { error: 'Authentication service not available' }
-      }
-
-      // First check if user exists and their verification status
-      const { data: { user }, error: userError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (userError) {
-        return { error: userError.message }
-      }
-
-      if (user && !user.email_confirmed_at) {
-        return { error: 'Email verification required. Please verify your email before signing in.' }
-      }
-
-      // If we reach here, the user is verified and can sign in
-      return { error: null }
-    } catch (err) {
-      console.error('Sign in error:', err)
-      return { error: 'An unexpected error occurred' }
-    }
+    // Use the same logic as buyerSignIn for consistency
+    return await buyerSignIn(email, password)
   }
 
   const signOut = async () => {
     try {
-      console.log('🔄 AuthContext: Starting sign out process...')
-      
-      // Since we're using custom table-based auth, we don't need to call supabase.auth.signOut()
-      // Just clear all local state and localStorage
-      
       // Clear localStorage first
       localStorage.removeItem('userData')
       
@@ -488,33 +332,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserRole(null)
       setUser(null)
       
-      console.log('🧹 AuthContext: Local state and localStorage cleared')
-      
-      // Dispatch events in the correct order for immediate UI update
+      // Dispatch events for immediate UI update
       if (typeof window !== 'undefined') {
-        console.log('📡 AuthContext: Dispatching userSignedOut event first')
-        // Dispatch sign out event first for immediate UI update
         window.dispatchEvent(new CustomEvent('userSignedOut', {
           detail: { timestamp: Date.now() }
         }))
-        
-        // Then dispatch general user data changed event
-        console.log('📡 AuthContext: Dispatching userDataChanged event')
         window.dispatchEvent(new Event('userDataChanged'))
       }
       
       // Navigate to home page after sign out
-      try {
-        console.log('🏠 AuthContext: Redirecting to home page after sign out')
-        router.push('/')
-      } catch (navError) {
-        console.error('❌ AuthContext: Navigation error after sign out:', navError)
-      }
-      
-      console.log('✅ AuthContext: Sign out completed successfully')
+      router.push('/')
       
     } catch (error) {
-      console.error('❌ AuthContext: Sign out error:', error)
+      console.error('Sign out error:', error)
       // Even if there's an error, clear state
       localStorage.removeItem('userData')
       setUserProfile(null)
@@ -530,13 +360,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Navigate to home page even on error
-      try {
-        console.log('🏠 AuthContext: Redirecting to home page after sign out error')
-        router.push('/')
-      } catch (navError) {
-        console.error('❌ AuthContext: Navigation error after sign out error:', navError)
+      router.push('/')
+    }
+  }
+
+  const forceSync = () => {
+    const syncUserFromLocalStorage = () => {
+      if (typeof window !== 'undefined') {
+        const storedUserData = localStorage.getItem('userData')
+        
+        if (storedUserData && storedUserData !== 'null' && storedUserData !== 'undefined') {
+          try {
+            const userData = JSON.parse(storedUserData)
+            
+            // Validate that userData has required fields
+            if (userData.id && userData.email && userData.role) {
+              // Create a mock User object that matches Supabase User interface
+              const mockUser = {
+                id: userData.id,
+                email: userData.email,
+                role: userData.role,
+                user_metadata: {
+                  name: userData.name,
+                  role: userData.role
+                },
+                app_metadata: {
+                  role: userData.role
+                }
+              } as any
+              
+              // Set user state
+              setUser(mockUser)
+              setUserRole(userData.role)
+              setUserProfile(userData)
+            } else {
+              // Clear invalid user data
+              localStorage.removeItem('userData')
+              setUser(null)
+              setUserRole(null)
+              setUserProfile(null)
+            }
+          } catch (error) {
+            console.error('Error parsing userData from localStorage:', error)
+            // Clear corrupted user data
+            localStorage.removeItem('userData')
+            setUser(null)
+            setUserRole(null)
+            setUserProfile(null)
+          }
+        } else {
+          // Clear user state if no data in localStorage
+          setUser(null)
+          setUserRole(null)
+          setUserProfile(null)
+        }
       }
     }
+    syncUserFromLocalStorage()
   }
 
   const value = {
@@ -549,6 +429,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     buyerSignIn,
     userRole,
     userProfile,
+    forceSync,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

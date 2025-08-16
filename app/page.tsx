@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, ShoppingBag, Star, Truck, Shield, Smartphone, Shirt, Home as HomeIcon, BookOpen, Heart, Gamepad2, Car, Trophy, Clock, Tag } from 'lucide-react'
 import TodaysDeals from '@/components/TodaysDeals'
+import AddToCartButton from '@/components/AddToCartButton'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useModal } from '@/contexts/ModalContext'
@@ -46,6 +47,16 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Test Cart Link */}
+      <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-40">
+        <Link
+          href="/test-cart"
+          className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg"
+        >
+          🛒 Test Cart Functionality
+        </Link>
+      </div>
       
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
@@ -418,7 +429,20 @@ export default function Home() {
                     </span>
                   </div>
                   
-
+                  {/* Add to Cart Button */}
+                  <AddToCartButton
+                    product={{
+                      id: `featured-${index}`,
+                      name: product.name,
+                      description: `${product.name} - ${product.category} product with ${product.rating} star rating`,
+                      price: product.price,
+                      image_url: product.image,
+                      category: product.category,
+                      seller_id: 'featured-seller'
+                    }}
+                    className="w-full"
+                    size="md"
+                  />
                 </div>
               </div>
             ))}

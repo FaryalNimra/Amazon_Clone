@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Globe, Moon, Sun, ChevronDown, Menu, X, User, Store } from 'lucide-react'
+import { Search, Globe, Moon, Sun, ChevronDown, Menu, X, User, Store, ShoppingCart } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useModal } from '@/contexts/ModalContext'
+import { useCart } from '@/contexts/CartContext'
 
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -47,6 +48,8 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
   const { openSignUpModal, openSignInModal } = useModal()
 
   const { userRole, userProfile, signOut } = useAuth()
+  const { state: cartState } = useCart()
+  const cartItemCount = cartState.itemCount
 
   // Synchronize Navbar user state with AuthContext
   useEffect(() => {
@@ -533,6 +536,19 @@ const Navbar: React.FC<NavbarProps> = ({ onThemeToggle, isDarkMode }) => {
 
           {/* Right side items */}
           <div className="flex items-center space-x-4">
+            
+            {/* Cart Icon */}
+            <Link
+              href="/cart"
+              className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+            >
+              <ShoppingCart className="h-6 w-6" />
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary-red text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                  {cartItemCount > 99 ? '99+' : cartItemCount}
+                </span>
+              )}
+            </Link>
             
             {/* Theme Toggle */}
             <button

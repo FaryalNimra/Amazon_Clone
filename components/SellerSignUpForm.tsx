@@ -113,10 +113,48 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
         if (sellerData && sellerData.length > 0) {
           console.log('✅ Seller data stored successfully in sellers table:', sellerData[0])
           
-          // Create a simple user session (you can implement your own session management)
+          // Create a simple user session and store in localStorage
           const seller = sellerData[0]
           console.log('🎉 Seller account created successfully!')
           console.log('📝 Seller data:', seller)
+          
+          // Store seller data in localStorage for session management
+          const userData = {
+            id: seller.id,
+            name: seller.name,
+            email: seller.email,
+            phone: seller.phone,
+            role: 'seller',
+            storeName: seller.store_name,
+            gstNumber: seller.gst_number,
+            businessType: seller.business_type,
+            businessAddress: seller.business_address,
+            created_at: seller.created_at,
+            updated_at: seller.updated_at
+          }
+          
+          console.log('💾 Storing SELLER data in localStorage:', userData)
+          localStorage.setItem('userData', JSON.stringify(userData))
+          
+          // Verify the data was stored correctly
+          const storedData = localStorage.getItem('userData')
+          console.log('✅ Verification - Stored data in localStorage:', storedData)
+          
+          // Dispatch custom event to notify AuthContext of user data change
+          if (typeof window !== 'undefined') {
+            console.log('📡 Dispatching userDataChanged event for SELLER')
+            window.dispatchEvent(new Event('userDataChanged'))
+            
+            // Also trigger a storage event to ensure it's detected
+            setTimeout(() => {
+              console.log('📡 Triggering storage event for SELLER')
+              window.dispatchEvent(new StorageEvent('storage', {
+                key: 'userData',
+                newValue: storedData,
+                oldValue: null
+              }))
+            }, 50)
+          }
           
           setSignUpSuccess(true)
           setShowAccountCreatedModal(true)

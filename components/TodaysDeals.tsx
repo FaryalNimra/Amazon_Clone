@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Clock, Tag, ArrowRight } from 'lucide-react'
+import AddToCartButton from './AddToCartButton'
 
 import Link from 'next/link'
 
@@ -166,7 +167,20 @@ const TodaysDeals: React.FC = () => {
                   You save ${(deal.originalPrice - deal.discountedPrice).toFixed(2)}!
                 </div>
                 
-
+                {/* Add to Cart Button */}
+                <AddToCartButton
+                  product={{
+                    id: deal.id,
+                    name: deal.name,
+                    description: `${deal.name} - Limited time deal with ${deal.discountPercentage}% off!`,
+                    price: deal.discountedPrice,
+                    image_url: deal.image,
+                    category: deal.category,
+                    seller_id: 'demo-seller' // Since this is demo data
+                  }}
+                  className="w-full"
+                  size="md"
+                />
               </div>
             </div>
           ))}

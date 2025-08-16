@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Product, supabase } from '@/lib/supabase'
+import AddToCartButton from '@/components/AddToCartButton'
 
 const CategoryPage = ({ params }: { params: { slug: string } }) => {
   const { user } = useAuth()
@@ -95,6 +96,11 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   const categoryName = categoryInfo.name
   const categoryDescription = categoryInfo.description
 
+  // Debug logging for category info
+  console.log('Category Info:', categoryInfo)
+  console.log('Category Name:', categoryName)
+  console.log('Category Slug:', params.slug)
+
   // Fetch products from database
   useEffect(() => {
     const fetchProducts = async () => {
@@ -109,11 +115,22 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
         // Handle main Fashion category - fetch all fashion subcategories
         if (params.slug === 'fashion') {
           query = query.in('category', ['Men\'s Clothing', 'Women\'s Clothing', 'Kids\' Fashion', 'Shoes', 'Bags'])
+        } else if (params.slug === 'electronics') {
+          // Show ALL products for Electronics page (not just Electronics category)
+          query = supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false })
         } else {
           query = query.eq('category', categoryName)
         }
 
-        const { data, error } = await query
+        // Add debug logging
+        console.log('Query being executed:', query)
+        console.log('Category being searched:', categoryName)
+        console.log('Slug being used:', params.slug)
+
+        let { data, error } = await query
 
         if (error) {
           console.error('Error fetching products:', error)
@@ -129,6 +146,9 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
           name: product.name,
           description: product.description,
           price: product.price,
+          stock: product.stock || 0,
+          category: product.category || 'Unknown',
+          seller_id: product.seller_id || 'unknown-seller',
           originalPrice: product.original_price,
           image_url: product.image_url || product.image, // Handle both column names
           rating: product.rating || 4.0,
@@ -700,48 +720,83 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                       </span>
                     </div>
                     
-
+                    {/* Add to Cart Button */}
+                    <AddToCartButton
+                      product={{
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        image_url: product.image_url,
+                        category: product.category,
+                        seller_id: product.seller_id
+                      }}
+                      className="w-full"
+                      size="md"
+                    />
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-8">
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-                  
-                  {[...Array(totalPages)].map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPage(index + 1)}
-                      className={`px-3 py-2 rounded-md ${
-                        currentPage === index + 1
-                          ? 'bg-primary-red text-white'
-                          : 'border border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
-                  
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+            <div className="flex justify-center mt-8">
+              <div className="flex items-center space-x-2">
+                {/* Show All Button */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className={`px-3 py-2 rounded-md ${
+                    currentPage === 1
+                      ? 'bg-primary-red text-white'
+                      : 'border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Show All
+                </button>
+                
+                {/* Previous Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                
+                {/* Page Numbers */}
+                {totalPages > 1 && (
+                  <>
+                    {[...Array(totalPages)].map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPage(index + 1)}
+                        className={`px-3 py-2 rounded-md ${
+                          currentPage === index + 1
+                            ? 'bg-primary-red text-white'
+                            : 'border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </>
+                )}
+                
+                {/* Next Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                
+                {/* Page Info */}
+                <div className="ml-4 text-sm text-gray-600">
+                  Page {currentPage} of {Math.max(1, totalPages)} • {filteredProducts.length} products
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

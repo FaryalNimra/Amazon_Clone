@@ -1,26 +1,8 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { Upload, Edit3, Trash2, Check, X, Download, Eye } from 'lucide-react'
+import { Upload, Edit3, Trash2, Check, X, Download, Eye, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-
-// Custom scrollbar styles
-const scrollbarStyles = `
-  .scrollbar-thin::-webkit-scrollbar {
-    height: 8px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 4px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 4px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-  }
-`
 
 interface ProductRow {
   id: string
@@ -29,6 +11,7 @@ interface ProductRow {
   category: string
   price: number
   image_url: string
+  stock?: number
   isEditing?: boolean
   originalData?: ProductRow
 }
@@ -87,6 +70,8 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
       
       // Validate required headers
       const requiredHeaders = ['name', 'description', 'category', 'price', 'image_url']
+      const optionalHeaders = ['stock']
+      const allHeaders = [...requiredHeaders, ...optionalHeaders]
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
       
       if (missingHeaders.length > 0) {
@@ -115,7 +100,8 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
             description: values[headers.indexOf('description')] || '',
             category: values[headers.indexOf('category')] || '',
             price: parseFloat(values[headers.indexOf('price')]) || 0,
-            image_url: values[headers.indexOf('image_url')] || ''
+            image_url: values[headers.indexOf('image_url')] || '',
+            stock: parseInt(values[headers.indexOf('stock')]) || 10
           }
           
           if (product.name && product.description && product.category && product.price > 0) {
@@ -312,34 +298,33 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
   }
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
-      <div className="h-full overflow-y-auto space-y-6 p-4">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 md:p-6 mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-red to-red-600 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Upload className="w-6 h-6 text-white" />
+      <div className="bg-gradient-to-r from-red-50 via-pink-50 to-red-100 border border-red-200 rounded-2xl p-6 mb-6 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-xl transform rotate-3 hover:rotate-0 transition-transform duration-300">
+              <Upload className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Bulk Product Upload</h2>
-              <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                Upload multiple products at once using a CSV file. Review and edit products before final upload 
-                to ensure accuracy and quality.
-              </p>
+                             <h2 className="text-xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                 Bulk Product Upload
+               </h2>
+               <p className="text-sm text-gray-700 leading-relaxed max-w-2xl">
+                 Upload multiple products at once using a CSV file. Review and edit products before final upload 
+                 to ensure accuracy and quality. <span className="font-semibold text-red-600">Save time and effort!</span>
+               </p>
             </div>
           </div>
-          <div className="flex flex-col items-start lg:items-end space-y-2">
-            <p className="text-sm text-gray-600">After upload, products will appear in:</p>
+          <div className="flex flex-col items-end space-y-3">
+            <p className="text-xs text-gray-600 font-medium">After upload, products will appear in:</p>
             <button
               onClick={() => {
-                // This will be handled by the parent component
                 if (onUploadSuccess) {
                   onUploadSuccess()
                 }
               }}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
             >
               <Eye className="w-4 h-4 mr-2" />
               View All Products
@@ -349,73 +334,82 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
       </div>
 
       {/* CSV Template Download */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 md:p-6 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-start space-y-4 lg:space-y-0 lg:space-x-4">
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 rounded-2xl p-6 shadow-xl">
+        <div className="flex items-start space-x-6">
           <div className="flex-shrink-0">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <Download className="w-6 h-6 text-white" />
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+              <Download className="w-7 h-7 text-white" />
             </div>
           </div>
           
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">CSV Template Download</h3>
-            <p className="text-gray-600 mb-4 leading-relaxed">
-              Download our pre-formatted CSV template to ensure your product data is correctly structured. 
-              The template includes sample data and all required columns.
-            </p>
+                         <h3 className="text-base font-bold text-gray-900 mb-3">CSV Template Download</h3>
+             <p className="text-sm text-gray-700 mb-6 leading-relaxed">
+               Download our pre-formatted CSV template to ensure your product data is correctly structured. 
+               The template includes sample data and all required columns.
+             </p>
             
             {/* Column Information */}
-            <div className="bg-white rounded-lg p-4 border border-blue-100 mb-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Required Columns:</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700 font-medium">name</span>
-                  <span className="text-xs text-gray-500">(required)</span>
+            <div className="bg-white rounded-xl p-6 border border-blue-100 mb-6 shadow-md">
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Required Columns:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-gray-800">name</span>
+                  <span className="text-xs text-green-600 font-medium">(required)</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700 font-medium">description</span>
-                  <span className="text-xs text-gray-500">(required)</span>
+                <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-gray-800">description</span>
+                  <span className="text-xs text-green-600 font-medium">(required)</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700 font-medium">category</span>
-                  <span className="text-xs text-gray-500">(required)</span>
+                <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-gray-800">category</span>
+                  <span className="text-xs text-green-600 font-medium">(required)</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700 font-medium">price</span>
-                  <span className="text-xs text-gray-500">(required)</span>
+                <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-gray-800">price</span>
+                  <span className="text-xs text-green-600 font-medium">(required)</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm text-gray-700 font-medium">image_url</span>
-                  <span className="text-xs text-gray-500">(optional)</span>
+                <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-gray-800">image_url</span>
+                  <span className="text-xs text-blue-600 font-medium">(optional)</span>
+                </div>
+              </div>
+              
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Optional Columns:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-gray-800">stock</span>
+                  <span className="text-xs text-blue-600 font-medium">(optional)</span>
                 </div>
               </div>
             </div>
             
             {/* Sample Preview */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Sample Data Preview:</h4>
-              <div className="text-xs text-gray-600 font-mono bg-white p-3 rounded border">
-                <div className="break-words">
-                  <span className="text-blue-600">name</span>,<span className="text-green-600">description</span>,<span className="text-purple-600">category</span>,<span className="text-orange-600">price</span>,<span className="text-red-600">image_url</span>
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 mb-6 shadow-md">
+              <h4 className="text-base font-semibold text-gray-900 mb-3">Sample Data Preview:</h4>
+              <div className="text-sm text-gray-700 font-mono bg-white p-4 rounded-lg border border-gray-200 overflow-x-auto shadow-inner">
+                <div className="whitespace-nowrap">
+                  <span className="text-blue-600 font-semibold">name</span>,<span className="text-green-600 font-semibold">description</span>,<span className="text-purple-600 font-semibold">category</span>,<span className="text-orange-600 font-semibold">price</span>,<span className="text-red-600 font-semibold">image_url</span>,<span className="text-indigo-600 font-semibold">stock</span>
                 </div>
-                <div className="break-words mt-1">
-                  <span className="text-blue-600">"Wireless Headphones"</span>,<span className="text-green-600">"High-quality wireless headphones"</span>,<span className="text-purple-600">"Electronics"</span>,<span className="text-orange-600">89.99</span>,<span className="text-red-600">"https://..."</span>
+                <div className="whitespace-nowrap mt-2 text-gray-600">
+                  <span className="text-blue-600">"Wireless Bluetooth Headphones"</span>,<span className="text-green-600">"High-quality wireless headphones with noise cancellation"</span>,<span className="text-purple-600">"Electronics"</span>,<span className="text-orange-600">89.99</span>,<span className="text-red-600">"https://..."</span>,<span className="text-indigo-600">50</span>
                 </div>
               </div>
             </div>
             
             <button
               onClick={() => {
-                const csvContent = `name,description,category,price,image_url
-"Wireless Bluetooth Headphones","High-quality wireless headphones with noise cancellation","Electronics",89.99,"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-"Premium Running Shoes","Comfortable running shoes for professional athletes","Sports & Outdoors",129.99,"https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-"Organic Cotton T-Shirt","Soft and comfortable organic cotton t-shirt","Fashion",24.99,"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-"Smart Home Security Camera","WiFi-enabled security camera with night vision","Electronics",149.99,"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"`
+                const csvContent = `name,description,category,price,image_url,stock
+"Wireless Bluetooth Headphones","High-quality wireless headphones with noise cancellation","Electronics",89.99,"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",50
+"Premium Running Shoes","Comfortable running shoes for professional athletes","Sports & Outdoors",129.99,"https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",75
+"Organic Cotton T-Shirt","Soft and comfortable organic cotton t-shirt","Fashion",24.99,"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",120
+"Smart Home Security Camera","WiFi-enabled security camera with night vision","Electronics",149.99,"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",30`
                 const blob = new Blob([csvContent], { type: 'text/csv' })
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
@@ -424,7 +418,7 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
                 a.click()
                 window.URL.revokeObjectURL(url)
               }}
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white text-sm font-medium rounded-xl transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl"
             >
               <Download className="w-5 h-5 mr-2" />
               Download CSV Template
@@ -434,17 +428,17 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
       </div>
 
       {/* File Upload */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300 rounded-xl p-4 md:p-8 text-center hover:border-primary-red hover:from-red-50 hover:to-red-100 transition-all duration-300 group">
-        <div className="max-w-md mx-auto">
-          <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 group-hover:from-red-200 group-hover:to-red-300 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-300">
-            <Upload className="w-8 h-8 text-gray-600 group-hover:text-red-600 transition-colors" />
+      <div className="bg-gradient-to-br from-gray-50 via-red-50 to-pink-50 border-2 border-dashed border-red-300 rounded-2xl p-6 text-center hover:border-red-400 hover:from-red-100 hover:to-pink-100 transition-all duration-500 group shadow-lg hover:shadow-xl">
+        <div className="max-w-lg mx-auto">
+          <div className="w-16 h-16 bg-gradient-to-br from-red-200 via-pink-200 to-red-300 group-hover:from-red-300 group-hover:via-pink-300 group-hover:to-red-400 rounded-full flex items-center justify-center mx-auto mb-6 transition-all duration-500 transform group-hover:scale-110 shadow-lg">
+            <Upload className="w-8 h-8 text-red-600 group-hover:text-red-700 transition-colors" />
           </div>
           
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload Your CSV File</h3>
-          <p className="text-gray-600 mb-6 leading-relaxed">
-            Choose a CSV file with your product data. Make sure it follows the template format 
-            for the best results.
-          </p>
+                     <h3 className="text-base font-bold text-gray-900 mb-3">Upload Your CSV File</h3>
+           <p className="text-sm text-gray-700 mb-6 leading-relaxed">
+             Choose a CSV file with your product data. Make sure it follows the template format 
+             for the best results.
+           </p>
           
           <input
             ref={fileInputRef}
@@ -453,20 +447,20 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
             onChange={handleFileUpload}
             className="hidden"
           />
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+          <div className="flex items-center justify-center space-x-4">
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isParsing}
-              className="inline-flex items-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-primary-red to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none shadow-lg hover:shadow-xl disabled:shadow-none w-full sm:w-auto"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-500 via-pink-500 to-red-600 hover:from-red-600 hover:via-pink-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white text-sm font-medium rounded-xl transition-all duration-500 transform hover:scale-105 disabled:transform-none shadow-lg hover:shadow-xl disabled:shadow-none"
             >
               {isParsing ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                   Parsing CSV...
                 </>
               ) : (
                 <>
-                  <Upload className="w-6 h-6 mr-3" />
+                  <Upload className="w-5 h-5 mr-2" />
                   Choose CSV File
                 </>
               )}
@@ -475,22 +469,22 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
             {/* Cancel Button */}
             <button
               onClick={() => resetUpload()}
-              className="inline-flex items-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl w-full sm:w-auto"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-500 via-gray-600 to-gray-700 hover:from-gray-600 hover:via-gray-700 hover:to-gray-800 text-white text-sm font-medium rounded-xl transition-all duration-500 transform hover:scale-105 shadow-lg hover:shadow-xl"
             >
-              <X className="w-6 h-6 mr-3" />
+              <X className="w-5 h-5 mr-2" />
               Cancel
             </button>
           </div>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500 mb-2">Supported format: CSV files only</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-xs text-gray-400">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <p className="text-xs text-gray-600 mb-3 font-medium">Supported format: CSV files only</p>
+            <div className="flex items-center justify-center space-x-6 text-xs text-gray-500">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                 <span>Max size: 5MB</span>
               </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                 <span>UTF-8 encoding</span>
               </div>
             </div>
@@ -500,67 +494,45 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
 
       {/* Message Display */}
       {showMessageState && (
-        <div className={`p-4 rounded-lg ${
+        <div className={`p-4 rounded-xl shadow-lg border-2 ${
           uploadMessage.includes('successfully') 
-            ? 'bg-green-50 border border-green-200 text-green-800' 
-            : 'bg-red-50 border border-red-200 text-red-800'
+            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-800' 
+            : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-300 text-red-800'
         }`}>
           <div className="flex items-center">
             {uploadMessage.includes('successfully') ? (
-              <Check className="w-5 h-5 mr-2" />
+              <Check className="w-5 h-5 mr-3 text-green-600" />
             ) : (
-              <X className="w-5 h-5 mr-2" />
+              <X className="w-5 h-5 mr-3 text-red-600" />
             )}
-            <span className="whitespace-pre-line">{uploadMessage}</span>
+            <span className="whitespace-pre-line font-medium text-sm">{uploadMessage}</span>
           </div>
         </div>
       )}
 
       {/* Products Preview Table */}
       {products.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-base font-semibold text-gray-900">
               Preview ({products.length} products)
             </h3>
             <button
               onClick={resetUpload}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="inline-flex items-center px-3 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
             >
               Reset Upload
             </button>
           </div>
 
-          {/* Products List - Matching Seller Dashboard Style */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">CSV Products Preview</h3>
+                <h3 className="text-base font-semibold text-gray-900">CSV Products Preview</h3>
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <label htmlFor="sort" className="text-sm text-gray-600">Sort by:</label>
-                    <select
-                      id="sort"
-                      onChange={(e) => {
-                        const sortBy = e.target.value
-                        const sortedProducts = [...products].sort((a, b) => {
-                          switch (sortBy) {
-                            case 'name':
-                              return a.name.localeCompare(b.name)
-                            case 'price-low':
-                              return a.price - b.price
-                            case 'price-high':
-                              return b.price - a.price
-                            case 'category':
-                              return a.category.localeCompare(b.category)
-                            default:
-                              return 0
-                          }
-                        })
-                        setProducts(sortedProducts)
-                      }}
-                      className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary-red"
-                    >
+                  <div className="flex items-center space-x-3">
+                    <label className="text-xs font-medium text-gray-700">Sort by:</label>
+                    <select className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white shadow-sm">
                       <option value="name">Name: A to Z</option>
                       <option value="price-low">Price: Low to High</option>
                       <option value="price-high">Price: High to Low</option>
@@ -571,164 +543,200 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
               </div>
             </div>
             
-            <div className="divide-y divide-gray-200">
-              {products.map((product) => (
-                <div key={product.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50">
-                  <div className="flex items-center">
-                    <img
-                      src={product.image_url || '/placeholder.jpg'}
-                      alt={product.name}
-                      className="w-16 h-16 object-cover rounded-md mr-4"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.src = '/placeholder.jpg'
-                      }}
-                    />
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h4 className="text-sm font-medium text-gray-900">
-                          {product.isEditing ? (
-                            <input
-                              type="text"
-                              value={product.name}
-                              onChange={(e) => handleInputChange(product.id, 'name', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-sm"
-                            />
-                          ) : (
-                            product.name
-                          )}
-                        </h4>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          <Upload className="w-3 h-3 mr-1" />
-                          CSV Preview
-                        </span>
-                      </div>
-                      <div className="mt-1">
-                        {product.isEditing ? (
-                          <textarea
-                            value={product.description}
-                            onChange={(e) => handleInputChange(product.id, 'description', e.target.value)}
-                            rows={2}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-xs"
-                            placeholder="Product description"
-                          />
-                        ) : (
-                          <p className="text-xs text-gray-500">{product.description}</p>
-                        )}
-                      </div>
-                      <div className="mt-1">
-                        {product.isEditing ? (
-                          <div className="flex items-center space-x-2">
-                            <select
-                              value={product.category}
-                              onChange={(e) => handleInputChange(product.id, 'category', e.target.value)}
-                              className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-xs"
-                            >
-                              <option value="">Select Category</option>
-                              {categories.map((cat) => (
-                                <option key={cat} value={cat}>{cat}</option>
-                              ))}
-                            </select>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={product.price}
-                              onChange={(e) => handleInputChange(product.id, 'price', parseFloat(e.target.value) || 0)}
-                              className="w-20 px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-xs"
-                              placeholder="0.00"
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-sm text-gray-700">${product.price.toFixed(2)}</p>
-                            <p className="text-xs text-gray-500">Category: {product.category}</p>
-                          </>
-                        )}
-                      </div>
-                      {product.isEditing && (
-                        <div className="mt-2">
-                          <input
-                            type="url"
-                            value={product.image_url}
-                            onChange={(e) => handleInputChange(product.id, 'image_url', e.target.value)}
-                            placeholder="Image URL"
-                            className="w-full px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-transparent text-xs"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {product.isEditing ? (
-                      <>
-                        <button
-                          onClick={() => handleSave(product.id)}
-                          className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Save
-                        </button>
-                        <button
-                          onClick={() => handleCancel(product.id)}
-                          className="inline-flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => handleEdit(product.id)}
-                          className="p-2 text-primary-red hover:text-red-600 rounded-full"
-                          title="Edit product"
-                        >
-                          <Edit3 className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="p-2 text-red-500 hover:text-red-700 rounded-full"
-                          title="Delete product"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {products.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No products to preview. Please upload a CSV file first.</p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-3">
+                {products.map((product, index) => {
+                   // Soft pastel colors for product cards
+                   const cardStyles = [
+                     'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 shadow-sm',
+                     'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm',
+                     'bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 shadow-sm',
+                     'bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 shadow-sm',
+                     'bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 shadow-sm',
+                     'bg-gradient-to-r from-cyan-50 to-teal-50 border border-cyan-200 shadow-sm',
+                     'bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 shadow-sm',
+                     'bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 shadow-sm'
+                   ]
+                   
+                   const cardStyle = cardStyles[index % cardStyles.length]
+                   
+                   return (
+                     <div key={product.id} className={`rounded-lg p-3 ${cardStyle} hover:shadow-md transition-all duration-300`}>
+                       <div className="flex items-start space-x-3">
+                         {/* Product Image */}
+                         <div className="flex-shrink-0">
+                           <img
+                             src={product.image_url || '/placeholder.jpg'}
+                             alt={product.name}
+                             className="w-14 h-14 object-cover rounded-lg border-2 border-white shadow-sm"
+                             onError={(e) => {
+                               const target = e.target as HTMLImageElement
+                               target.style.display = 'none'
+                             }}
+                           />
+                         </div>
+                         
+                         {/* Product Details */}
+                         <div className="flex-1 min-w-0 space-y-2">
+                           {/* Product Name and Badge */}
+                           <div className="flex items-start justify-between">
+                             <div className="flex-1">
+                               <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                                 {product.isEditing ? (
+                                   <input
+                                     type="text"
+                                     value={product.name}
+                                     onChange={(e) => handleInputChange(product.id, 'name', e.target.value)}
+                                     className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs font-medium"
+                                   />
+                                 ) : (
+                                   product.name
+                                 )}
+                               </h4>
+                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                 <Upload className="w-3 h-3 mr-1" />
+                                 CSV Preview
+                               </span>
+                             </div>
+                             
+                             {/* Price */}
+                             <div className="text-right">
+                               <p className="text-base font-bold text-gray-900">
+                                 ${product.isEditing ? (
+                                   <input
+                                     type="number"
+                                     step="0.01"
+                                     min="0"
+                                     value={product.price}
+                                     onChange={(e) => handleInputChange(product.id, 'price', parseFloat(e.target.value) || 0)}
+                                     className="w-20 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs font-medium"
+                                   />
+                                 ) : (
+                                   product.price.toFixed(2)
+                                 )}
+                               </p>
+                             </div>
+                           </div>
+                           
+                           {/* Description */}
+                           <div>
+                             <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                             {product.isEditing ? (
+                               <textarea
+                                 value={product.description}
+                                 onChange={(e) => handleInputChange(product.id, 'description', e.target.value)}
+                                 rows={2}
+                                 className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs resize-none"
+                                 placeholder="Enter product description..."
+                               />
+                             ) : (
+                               <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{product.description}</p>
+                             )}
+                           </div>
+                           
+                           {/* Category and Actions Row */}
+                           <div className="flex items-center justify-between pt-1">
+                             <div className="flex items-center space-x-3">
+                               <div>
+                                 <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                                 {product.isEditing ? (
+                                   <select
+                                     value={product.category}
+                                     onChange={(e) => handleInputChange(product.id, 'category', e.target.value)}
+                                     className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs font-medium"
+                                   >
+                                     <option value="">Select Category</option>
+                                     {categories.map((cat) => (
+                                       <option key={cat} value={cat}>{cat}</option>
+                                     ))}
+                                   </select>
+                                 ) : (
+                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                                     {product.category}
+                                   </span>
+                                 )}
+                               </div>
+                             </div>
+                             
+                             {/* Action Buttons - Icon Only */}
+                             <div className="flex items-center space-x-1">
+                               {product.isEditing ? (
+                                 <>
+                                   <button
+                                     onClick={() => handleSave(product.id)}
+                                     className="p-1.5 text-green-600 hover:text-green-700 rounded-full hover:bg-green-100 transition-colors"
+                                     title="Save Changes"
+                                   >
+                                     <Check className="w-4 h-4" />
+                                   </button>
+                                   <button
+                                     onClick={() => handleCancel(product.id)}
+                                     className="p-1.5 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+                                     title="Cancel Changes"
+                                   >
+                                     <X className="w-4 h-4" />
+                                   </button>
+                                 </>
+                               ) : (
+                                 <>
+                                   <button
+                                     onClick={() => handleEdit(product.id)}
+                                     className="p-1.5 text-red-600 hover:text-red-700 rounded-full hover:bg-red-100 transition-colors"
+                                     title="Edit Product"
+                                   >
+                                     <Edit3 className="w-4 h-4" />
+                                   </button>
+                                   <button
+                                     onClick={() => handleDelete(product.id)}
+                                     className="p-1.5 text-red-500 hover:text-red-700 rounded-full hover:bg-red-100 transition-colors"
+                                     title="Delete Product"
+                                   >
+                                     <Trash2 className="w-4 h-4" />
+                                   </button>
+                                 </>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   )
+                 })}
+               </div>
+            )}
           </div>
 
-          {/* Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary-red">{products.length}</div>
-                <div className="text-sm text-gray-600">Total Products</div>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 text-center">
+              <div className="text-2xl font-bold text-red-600 mb-1">{products.length}</div>
+              <div className="text-xs font-medium text-gray-700">Total Products</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 text-center">
+              <div className="text-2xl font-bold text-green-600 mb-1">
+                ${products.reduce((sum, p) => sum + p.price, 0).toFixed(2)}
               </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600">
-                  ${products.reduce((sum, p) => sum + p.price, 0).toFixed(2)}
-                </div>
-                <div className="text-sm text-gray-600">Total Value</div>
+              <div className="text-xs font-medium text-gray-700">Total Value</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 text-center">
+              <div className="text-2xl font-bold text-blue-600 mb-1">
+                {new Set(products.map(p => p.category)).size}
               </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {new Set(products.map(p => p.category)).size}
-                </div>
-                <div className="text-sm text-gray-600">Categories</div>
-              </div>
+              <div className="text-xs font-medium text-gray-700">Categories</div>
             </div>
           </div>
 
           {/* Upload Button */}
-          <div className="flex justify-center">
+          <div className="flex justify-center pt-3">
             <button
               onClick={handleBulkUpload}
               disabled={isUploading}
-              className="inline-flex items-center px-8 py-4 bg-primary-red hover:bg-red-600 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 disabled:transform-none"
+              className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none shadow-lg hover:shadow-xl"
             >
               {isUploading ? (
                 <>
@@ -746,7 +754,6 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
         </div>
       )}
     </div>
-    </>
   )
 }
 

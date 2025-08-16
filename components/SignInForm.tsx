@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff, AlertCircle, CheckCircle, Mail, X } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, CheckCircle, Mail, X, ArrowRight } from 'lucide-react'
 import { signInSchema, type SignInFormData } from '@/lib/validation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useModal } from '@/contexts/ModalContext'
@@ -204,13 +204,32 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
             )}
 
             {signInSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center">
-                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-white" />
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <div className="flex items-center mb-3">
+                  <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-green-700 text-sm font-medium">
+                    <strong>Sign in successful!</strong> {userRole === 'buyer' ? 'Redirecting to home page...' : userRole === 'seller' ? 'Redirecting to seller dashboard...' : 'Redirecting...'}
+                  </span>
                 </div>
-                <span className="text-green-700 text-sm">
-                  <strong>Sign in successful!</strong> {userRole === 'buyer' ? 'Redirecting to home page...' : userRole === 'seller' ? 'Redirecting to seller dashboard...' : 'Redirecting...'}
-                </span>
+                
+                {/* Manual Redirect Button */}
+                <div className="mt-3">
+                  <button
+                    onClick={() => {
+                      if (userRole === 'seller') {
+                        window.location.href = '/seller-dashboard'
+                      } else if (userRole === 'buyer') {
+                        window.location.href = '/'
+                      }
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium text-sm flex items-center justify-center"
+                  >
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    {userRole === 'seller' ? 'Go to Seller Dashboard' : userRole === 'buyer' ? 'Go to Home Page' : 'Continue'}
+                  </button>
+                </div>
               </div>
             )}
 
