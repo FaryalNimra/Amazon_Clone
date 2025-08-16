@@ -5,7 +5,7 @@ export async function GET() {
   try {
     console.log('🔍 Testing database connection and schema...')
     
-    // Test 1: Basic connection
+    // Test 1: Basic connection with products table
     const { data: connectionTest, error: connectionError } = await supabase
       .from('products')
       .select('id')
@@ -22,46 +22,45 @@ export async function GET() {
     
     console.log('✅ Database connection successful')
     
-    // Test 2: Check if profiles table exists
+    // Test 2: Check products table count
     try {
-      const { data: profilesTest, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id')
-        .limit(1)
+      const { count, error: countError } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
       
-      if (profilesError) {
-        console.log('❌ Profiles table error:', profilesError)
+      if (countError) {
+        console.log('❌ Products count error:', countError)
         return NextResponse.json({
           success: true,
           connection: 'Connected',
-          profilesTable: {
-            exists: false,
-            error: profilesError.message,
-            code: profilesError.code,
-            details: profilesError.details,
-            hint: profilesError.hint
+          productsTable: {
+            exists: true,
+            count: 'Error getting count',
+            error: countError.message
           }
         })
       }
       
-      console.log('✅ Profiles table exists and is accessible')
+      console.log('✅ Products table accessible, count:', count)
       return NextResponse.json({
         success: true,
         connection: 'Connected',
-        profilesTable: {
+        productsTable: {
           exists: true,
-          accessible: true
+          accessible: true,
+          productCount: count
         }
       })
       
-    } catch (profilesErr: any) {
-      console.error('❌ Unexpected error checking profiles table:', profilesErr)
+    } catch (countErr: any) {
+      console.error('❌ Unexpected error getting products count:', countErr)
       return NextResponse.json({
         success: true,
         connection: 'Connected',
-        profilesTable: {
-          exists: false,
-          error: profilesErr.message
+        productsTable: {
+          exists: true,
+          accessible: true,
+          count: 'Error getting count'
         }
       })
     }
