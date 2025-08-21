@@ -36,17 +36,28 @@ const ResetPasswordPage: React.FC = () => {
       } else {
         // Check if there's a recovery token in the URL
         const recoveryToken = searchParams.get('recovery_token')
-        if (recoveryToken) {
-          // Exchange recovery token for session
-          const { data, error } = await supabase.auth.verifyOtp({
-            token: recoveryToken,
-            type: 'recovery'
-          })
-          
-          if (error) {
-            setError('Invalid or expired reset link. Please request a new password reset.')
-          } else if (data.session) {
-            setSession(data.session)
+        const email = searchParams.get('email')
+        
+        if (recoveryToken && email) {
+          // For password recovery in Supabase v2, we need to exchange the recovery token
+          // for a session using the auth API
+          try {
+            // Exchange recovery token for session
+            const { data, error } = await supabase.auth.verifyOtp({
+              token: recoveryToken,
+              type: 'recovery',
+              email: email
+            })
+            
+            if (error) {
+              console.error('Recovery token verification error:', error)
+              setError('Invalid or expired reset link. Please request a new password reset.')
+            } else if (data.session) {
+              setSession(data.session)
+            }
+          } catch (err) {
+            console.error('Error verifying recovery token:', err)
+            setError('Invalid reset link. Please request a new password reset.')
           }
         } else {
           setError('Invalid reset link. Please request a new password reset.')
