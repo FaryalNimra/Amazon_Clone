@@ -27,11 +27,27 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
   const [isParsing, setIsParsing] = useState(false)
   const [uploadMessage, setUploadMessage] = useState('')
   const [showMessageState, setShowMessageState] = useState(false)
+  const [sortBy, setSortBy] = useState('name')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const categories = [
-    'Electronics',
-    'Fashion',
+    // Electronics subcategories
+    'Smartphones',
+    'Laptops', 
+    'Tablets',
+    'Headphones',
+    'Cameras',
+    'Gaming',
+    'Smart Home',
+    'Wearables',
+    'Accessories',
+    // Fashion subcategories
+    'Men\'s Clothing',
+    'Women\'s Clothing',
+    'Kids\' Fashion',
+    'Shoes',
+    'Bags',
+    // Other categories
     'Home & Garden',
     'Sports & Outdoors',
     'Beauty & Health',
@@ -104,7 +120,7 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
             stock: parseInt(values[headers.indexOf('stock')]) || 10
           }
           
-          if (product.name && product.description && product.category && product.price > 0) {
+          if (product.name && product.description && product.category.trim() && product.price > 0) {
             parsedProducts.push(product)
           }
         }
@@ -190,8 +206,8 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
       if (!product.description.trim()) {
         errors.push(`Row ${index + 1}: Description is required`)
       }
-      if (!product.category.trim()) {
-        errors.push(`Row ${index + 1}: Category is required`)
+      if (!product.category.trim() || product.category === '') {
+        errors.push(`Row ${index + 1}: Category is required and must be selected`)
       }
       if (product.price <= 0) {
         errors.push(`Row ${index + 1}: Price must be greater than 0`)
@@ -292,8 +308,31 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
 
   const resetUpload = () => {
     setProducts([])
+    setSortBy('name')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+  }
+
+  // Sort products based on selected criteria
+  const getSortedProducts = () => {
+    const sortedProducts = [...products]
+    
+    switch (sortBy) {
+      case 'name':
+        return sortedProducts.sort((a, b) => a.name.localeCompare(b.name))
+      case 'name-desc':
+        return sortedProducts.sort((a, b) => b.name.localeCompare(a.name))
+      case 'price-low':
+        return sortedProducts.sort((a, b) => a.price - b.price)
+      case 'price-high':
+        return sortedProducts.sort((a, b) => b.price - a.price)
+      case 'category':
+        return sortedProducts.sort((a, b) => a.category.localeCompare(b.category))
+      case 'category-desc':
+        return sortedProducts.sort((a, b) => b.category.localeCompare(a.category))
+      default:
+        return sortedProducts
     }
   }
 
@@ -351,6 +390,17 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
             
             {/* Column Information */}
             <div className="bg-white rounded-xl p-6 border border-blue-100 mb-6 shadow-md">
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Category Guide:</h4>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-yellow-800 mb-3">
+                  <strong>Important:</strong> Use specific categories instead of generic ones for better product organization and search results.
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><span className="font-medium">❌ Don't use:</span> "Electronics", "Fashion"</div>
+                  <div><span className="font-medium">✅ Use instead:</span> "Smartphones", "Laptops", "Men's Clothing"</div>
+                </div>
+              </div>
+              
               <h4 className="text-base font-semibold text-gray-900 mb-4">Required Columns:</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
@@ -398,7 +448,7 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
                   <span className="text-blue-600 font-semibold">name</span>,<span className="text-green-600 font-semibold">description</span>,<span className="text-purple-600 font-semibold">category</span>,<span className="text-orange-600 font-semibold">price</span>,<span className="text-red-600 font-semibold">image_url</span>,<span className="text-indigo-600 font-semibold">stock</span>
                 </div>
                 <div className="whitespace-nowrap mt-2 text-gray-600">
-                  <span className="text-blue-600">"Wireless Bluetooth Headphones"</span>,<span className="text-green-600">"High-quality wireless headphones with noise cancellation"</span>,<span className="text-purple-600">"Electronics"</span>,<span className="text-orange-600">89.99</span>,<span className="text-red-600">"https://..."</span>,<span className="text-indigo-600">50</span>
+                  <span className="text-blue-600">"Wireless Bluetooth Headphones"</span>,<span className="text-green-600">"High-quality wireless headphones with noise cancellation"</span>,<span className="text-purple-600">"Headphones"</span>,<span className="text-orange-600">89.99</span>,<span className="text-red-600">"https://..."</span>,<span className="text-indigo-600">50</span>
                 </div>
               </div>
             </div>
@@ -406,10 +456,10 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
             <button
               onClick={() => {
                 const csvContent = `name,description,category,price,image_url,stock
-"Wireless Bluetooth Headphones","High-quality wireless headphones with noise cancellation","Electronics",89.99,"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",50
-"Premium Running Shoes","Comfortable running shoes for professional athletes","Sports & Outdoors",129.99,"https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",75
-"Organic Cotton T-Shirt","Soft and comfortable organic cotton t-shirt","Fashion",24.99,"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",120
-"Smart Home Security Camera","WiFi-enabled security camera with night vision","Electronics",149.99,"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",30`
+"Wireless Bluetooth Headphones","High-quality wireless headphones with noise cancellation","Headphones",89.99,"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",50
+"Premium Running Shoes","Comfortable running shoes for professional athletes","Shoes",129.99,"https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",75
+"Organic Cotton T-Shirt","Soft and comfortable organic cotton t-shirt","Men's Clothing",24.99,"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",120
+"Smart Home Security Camera","WiFi-enabled security camera with night vision","Smart Home",149.99,"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",30`
                 const blob = new Blob([csvContent], { type: 'text/csv' })
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
@@ -532,11 +582,17 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3">
                     <label className="text-xs font-medium text-gray-700">Sort by:</label>
-                    <select className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white shadow-sm">
+                    <select 
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white shadow-sm"
+                    >
                       <option value="name">Name: A to Z</option>
+                      <option value="name-desc">Name: Z to A</option>
                       <option value="price-low">Price: Low to High</option>
                       <option value="price-high">Price: High to Low</option>
-                      <option value="category">Category</option>
+                      <option value="category">Category: A to Z</option>
+                      <option value="category-desc">Category: Z to A</option>
                     </select>
                   </div>
                 </div>
@@ -550,7 +606,7 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
               </div>
             ) : (
               <div className="p-4 space-y-3">
-                {products.map((product, index) => {
+                {getSortedProducts().map((product, index) => {
                    // Soft pastel colors for product cards
                    const cardStyles = [
                      'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 shadow-sm',
@@ -649,8 +705,8 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
                                      value={product.category}
                                      onChange={(e) => handleInputChange(product.id, 'category', e.target.value)}
                                      className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-xs font-medium"
+                                     required
                                    >
-                                     <option value="">Select Category</option>
                                      {categories.map((cat) => (
                                        <option key={cat} value={cat}>{cat}</option>
                                      ))}
@@ -719,13 +775,13 @@ const BulkProductUpload: React.FC<BulkUploadProps> = ({ onUploadSuccess, sellerI
             </div>
             <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 text-center">
               <div className="text-2xl font-bold text-green-600 mb-1">
-                ${products.reduce((sum, p) => sum + p.price, 0).toFixed(2)}
+                ${getSortedProducts().reduce((sum, p) => sum + p.price, 0).toFixed(2)}
               </div>
               <div className="text-xs font-medium text-gray-700">Total Value</div>
             </div>
             <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 text-center">
               <div className="text-2xl font-bold text-blue-600 mb-1">
-                {new Set(products.map(p => p.category)).size}
+                {new Set(getSortedProducts().map(p => p.category)).size}
               </div>
               <div className="text-xs font-medium text-gray-700">Categories</div>
             </div>

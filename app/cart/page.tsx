@@ -2,12 +2,11 @@
 
 import React from 'react'
 import { useCart } from '@/contexts/CartContext'
-import { ShoppingCart, Trash2, ArrowLeft, CreditCard, Package } from 'lucide-react'
+import { ShoppingCart, Trash2, ArrowLeft, CreditCard, Package, Plus, Minus } from 'lucide-react'
 import Link from 'next/link'
-import AddToCartButton from '@/components/AddToCartButton'
 
 export default function CartPage() {
-  const { state, removeFromCart, clearCart } = useCart()
+  const { state, removeFromCart, clearCart, updateQuantity, removeQuantity } = useCart()
   const { items, total, itemCount } = state
 
   const handleRemoveFromCart = async (itemId: string) => {
@@ -24,6 +23,25 @@ export default function CartPage() {
       if (!result.success) {
         alert(result.error || 'Failed to clear cart')
       }
+    }
+  }
+
+  const handleIncreaseQuantity = async (itemId: string, currentQuantity: number) => {
+    const result = await updateQuantity(itemId, currentQuantity + 1)
+    if (!result.success) {
+      alert(result.error || 'Failed to update quantity')
+    }
+  }
+
+  const handleDecreaseQuantity = async (itemId: string, currentQuantity: number) => {
+    if (currentQuantity > 1) {
+      const result = await removeQuantity(itemId)
+      if (!result.success) {
+        alert(result.error || 'Failed to update quantity')
+      }
+    } else {
+      // If quantity is 1, remove the item completely
+      await handleRemoveFromCart(itemId)
     }
   }
 
@@ -64,13 +82,6 @@ export default function CartPage() {
             <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
             <span className="text-lg text-gray-500">({itemCount} items)</span>
           </div>
-                     <Link
-             href="/"
-             className="inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors border border-gray-300 hover:border-gray-400"
-           >
-             <ArrowLeft className="w-5 h-5 mr-2" />
-             Continue Shopping
-           </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -123,11 +134,27 @@ export default function CartPage() {
                         
                         {/* Quantity Controls */}
                         <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center space-x-2">
-                            <AddToCartButton
-                              product={item}
-                              size="sm"
-                            />
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm font-medium text-gray-700">Quantity:</span>
+                            <div className="flex items-center border border-gray-300 rounded-lg">
+                              <button
+                                onClick={() => handleDecreaseQuantity(item.id, item.quantity)}
+                                className="p-2 hover:bg-gray-100 transition-colors rounded-l-lg"
+                                title="Decrease quantity"
+                              >
+                                <Minus className="w-4 h-4 text-gray-600" />
+                              </button>
+                              <span className="px-4 py-2 text-center min-w-[3rem] font-medium text-gray-900">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => handleIncreaseQuantity(item.id, item.quantity)}
+                                className="p-2 hover:bg-gray-100 transition-colors rounded-r-lg"
+                                title="Increase quantity"
+                              >
+                                <Plus className="w-4 h-4 text-gray-600" />
+                              </button>
+                            </div>
                           </div>
                           
                           {/* Remove Button */}
@@ -146,33 +173,23 @@ export default function CartPage() {
                 ))}
               </div>
               
-                             {/* Cart Actions */}
-               <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                 <div className="flex items-center justify-between">
-                   <div className="flex items-center space-x-3">
-                     <button
-                       onClick={handleClearCart}
-                       className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
-                     >
-                       Clear Cart
-                     </button>
-                     
-                     <Link
-                       href="/"
-                       className="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors border border-gray-300 hover:border-gray-400"
-                     >
-                       <ArrowLeft className="w-4 h-4 mr-2" />
-                       Back to Shopping
-                     </Link>
-                   </div>
-                   
-                   <div className="text-right">
-                     <p className="text-sm text-gray-600">
-                       Total Items: <span className="font-semibold">{itemCount}</span>
-                     </p>
-                   </div>
-                 </div>
-               </div>
+              {/* Cart Actions */}
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={handleClearCart}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    Clear Cart
+                  </button>
+                  
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">
+                      Total Items: <span className="font-semibold">{itemCount}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -203,31 +220,31 @@ export default function CartPage() {
                 </div>
               </div>
               
-                             {/* Checkout Button */}
-               <button
-                 className="w-full bg-primary-red hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors mb-4 flex items-center justify-center"
-               >
-                 <CreditCard className="w-5 h-5 mr-2" />
-                 Proceed to Checkout
-               </button>
-               
-               {/* Back to Shopping Button */}
-               <Link
-                 href="/"
-                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors mb-4 flex items-center justify-center border border-gray-300"
-               >
-                 <ArrowLeft className="w-5 h-5 mr-2" />
-                 Back to Shopping
-               </Link>
-               
-               {/* Additional Info */}
-               <div className="text-xs text-gray-500 text-center space-y-2">
-                 <div className="flex items-center justify-center space-x-2">
-                   <Package className="w-4 h-4" />
-                   <span>Free shipping on orders over $50</span>
-                 </div>
-                 <p>Secure checkout powered by Stripe</p>
-               </div>
+              {/* Checkout Button */}
+              <button
+                className="w-full bg-primary-red hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors mb-4 flex items-center justify-center"
+              >
+                <CreditCard className="w-5 h-5 mr-2" />
+                Proceed to Checkout
+              </button>
+              
+              {/* Back to Shopping Button - Only one button below the product list */}
+              <Link
+                href="/"
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors mb-4 flex items-center justify-center border border-gray-300"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back to Shopping
+              </Link>
+              
+              {/* Additional Info */}
+              <div className="text-xs text-gray-500 text-center space-y-2">
+                <div className="flex items-center justify-center space-x-2">
+                  <Package className="w-4 h-4" />
+                  <span>Free shipping on orders over $50</span>
+                </div>
+                <p>Secure checkout powered by Stripe</p>
+              </div>
             </div>
           </div>
         </div>

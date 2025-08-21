@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useBodyScroll } from '@/hooks/useBodyScroll'
 import { 
   Store, 
   Package, 
@@ -13,7 +14,6 @@ import {
   BarChart3,
   Calendar,
   Mail,
-  Home,
   Edit3,
   Upload,
   Tag,
@@ -134,6 +134,10 @@ const SellerDashboard: React.FC = () => {
     mode: 'view',
     product: null
   })
+  
+  // Use body scroll hook to prevent background scrolling when modal is open
+  useBodyScroll(productModal.isOpen)
+  
   const [editForm, setEditForm] = useState<ProductForm>({
     name: '',
     description: '',
@@ -148,9 +152,18 @@ const SellerDashboard: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
 
-  // Categories for products
+  // Categories for products - Updated to match Electronics page categories
   const categories = [
-    'Electronics',
+    'Smartphones',
+    'Laptops',
+    'Tablets',
+    'Headphones',
+    'Cameras',
+    'Gaming',
+    'Smart Home',
+    'Wearables',
+    'Accessories',
+    'Electronics', // Keep the general Electronics category for backward compatibility
     'Clothing',
     'Home & Garden',
     'Sports & Outdoors',
@@ -236,6 +249,14 @@ const SellerDashboard: React.FC = () => {
   }, [router])
 
   // Fetch products when user is authenticated
+  useEffect(() => {
+    if (user?.id) {
+      // Fetch products for dashboard overview (Recent Activity section)
+      fetchProducts()
+    }
+  }, [user?.id])
+
+  // Fetch products when switching to manage-products tab
   useEffect(() => {
     if (user?.id && activeTab === 'manage-products') {
       fetchProducts()
@@ -389,7 +410,7 @@ const SellerDashboard: React.FC = () => {
       `Price: $${productForm.price.toFixed(2)}\n` +
       `Category: ${productForm.category}\n` +
       `Stock: ${productForm.stock}\n\n` +
-      `This action cannot be undone.`
+      `Product has been added successfully. You can view or edit products anytime from the Manage Products page.`
     )
 
     if (!confirmed) {
@@ -503,12 +524,7 @@ const SellerDashboard: React.FC = () => {
     }
   }
 
-  const handleSwitchToBuyerMode = () => {
-    localStorage.removeItem('user')
-    setUser(null)
-    setSellerData(null)
-    router.push('/')
-  }
+
 
   const fetchProducts = async () => {
     if (!user?.id) return
@@ -1070,14 +1086,90 @@ const SellerDashboard: React.FC = () => {
           {/* Recent Activity */}
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
+                <button
+                  onClick={fetchProducts}
+                  disabled={productsLoading}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors disabled:opacity-50"
+                  title="Refresh recent activity"
+                >
+                  <RotateCcw className={`w-4 h-4 ${productsLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
             <div className="p-6">
-              <div className="text-center text-gray-500 py-8">
-                <Package className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>No recent activity</p>
-                <p className="text-sm">Start by adding your first product</p>
-              </div>
+              {productsLoading ? (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-red mx-auto mb-4"></div>
+                  <p>Loading recent activity...</p>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <Package className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No recent activity</p>
+                  <p className="text-sm">Start by adding your first product</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900 mb-4">Recently Added Products</h4>
+                  <div className="space-y-3">
+                    {products.slice(0, 5).map((product) => (
+                      <div key={product.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img
+                          src={product.image_url || '/placeholder.jpg'}
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded-md"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                            {(() => {
+                              const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+                              const isRecentlyAdded = new Date(product.created_at) > oneDayAgo
+                              return isRecentlyAdded ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  New
+                                </span>
+                              ) : null
+                            })()}
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Added {new Date(product.created_at).toLocaleDateString()} • ${product.price.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            product.stock > 0 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                          </span>
+                          <button
+                            onClick={() => openProductModal('view', product)}
+                            className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                            title="View Product"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {products.length > 5 && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => setActiveTab('manage-products')}
+                        className="text-sm text-primary-red hover:text-red-600 font-medium transition-colors"
+                      >
+                        View all {products.length} products →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2420,8 +2512,25 @@ const SellerDashboard: React.FC = () => {
         /* Remove ALL scrollbars from main dashboard */
         .min-h-screen, .flex, .bg-gray-50 {
           overflow: hidden !important;
-          scrollbar-width: none !important;
-          -ms-overflow-style: none !important;
+        }
+        
+        /* Ensure sidebar and main content don't overlap */
+        .sidebar-fixed {
+          position: fixed !important;
+          left: 0 !important;
+          top: 0 !important;
+          z-index: 40 !important;
+        }
+        
+        .main-content {
+          position: relative !important;
+          z-index: 10 !important;
+        }
+        
+        /* Prevent expand button from overlapping */
+        .expand-button {
+          flex-shrink: 0 !important;
+          margin-left: 0.5rem !important;
         }
         .min-h-screen::-webkit-scrollbar, .flex::-webkit-scrollbar, .bg-gray-50::-webkit-scrollbar {
           display: none !important;
@@ -2485,25 +2594,26 @@ const SellerDashboard: React.FC = () => {
       )}
 
       {/* Left Sidebar Navigation - Dark Theme */}
-      <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-gray-900 shadow-lg fixed left-0 top-0 h-full z-50 transition-all duration-300 transform ${
+      <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-gray-900 shadow-lg fixed left-0 top-0 h-full z-40 transition-all duration-300 transform sidebar-fixed ${
         mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         <div className="flex flex-col h-full">
           {/* Top Header - Logo and Collapse Button */}
           <div className="p-4 border-b border-gray-700">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <div className="w-8 h-8 bg-primary-red rounded-lg flex items-center justify-center flex-shrink-0">
                   <Store className="w-5 h-5 text-white" />
                 </div>
                 {!sidebarCollapsed && (
-                  <span className="text-xl font-bold text-white">Seller Hub</span>
+                  <span className="text-xl font-bold text-white truncate">Seller Hub</span>
                 )}
               </div>
               {/* Collapse/Expand Button */}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-1 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+                className="p-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors flex-shrink-0 ml-2 expand-button"
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
               </button>
@@ -2591,16 +2701,6 @@ const SellerDashboard: React.FC = () => {
           {/* Fixed Bottom Actions */}
           <div className="p-4 border-t border-gray-700 space-y-2">
             <button
-              onClick={handleSwitchToBuyerMode}
-              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-            >
-              <Home className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && (
-                <span className="font-medium text-sm">Back to Buyer View</span>
-              )}
-            </button>
-            
-            <button
               onClick={handleLogout}
               className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left text-red-400 hover:bg-red-900 hover:text-red-200 transition-colors"
             >
@@ -2615,14 +2715,16 @@ const SellerDashboard: React.FC = () => {
 
       {/* Main Content Area */}
       <div 
-        className={`flex-1 transition-all duration-300 main-screen-wrapper ${
+        className={`flex-1 transition-all duration-300 main-screen-wrapper main-content ${
           sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
         }`}
         style={{ 
           overflow: 'hidden', 
           scrollbarWidth: 'none', 
           msOverflowStyle: 'none',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          position: 'relative',
+          zIndex: 10
         }}
       >
         {/* Top Header - Fixed */}

@@ -48,15 +48,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Test Cart Link */}
-      <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-40">
-        <Link
-          href="/test-cart"
-          className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg"
-        >
-          🛒 Test Cart Functionality
-        </Link>
-      </div>
+
       
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
@@ -217,7 +209,7 @@ export default function Home() {
 
       {/* Explore Electronics Section */}
       <section id="featured-categories" className="py-24 relative overflow-hidden">
-        {/* Background Image with Overlay */}
+        {/* Background Image - No Overlay */}
         <div 
           className="absolute inset-0 electronics-bg"
           style={{
@@ -227,9 +219,6 @@ export default function Home() {
             backgroundRepeat: 'no-repeat'
           }}
         ></div>
-        
-        {/* Dark Overlay for Better Text Readability */}
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
         
         {/* Subtle Background Pattern */}
         <div className="absolute inset-0 opacity-20">
@@ -243,21 +232,21 @@ export default function Home() {
             {/* Left Side - Content */}
             <div className="space-y-8">
                           {/* Badge */}
-            <div className="inline-flex items-center px-4 py-2 bg-primary-red bg-opacity-90 text-white rounded-full text-sm font-semibold border border-red-400 border-opacity-30 backdrop-blur-sm">
+            <div className="inline-flex items-center px-4 py-2 bg-primary-red bg-opacity-90 text-white rounded-full text-sm font-semibold border border-red-400 border-opacity-30 backdrop-blur-sm shadow-lg">
               <Star className="w-4 h-4 mr-2" />
               Featured Category
             </div>
             
             {/* Main Heading */}
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight drop-shadow-2xl">
               Explore
-              <span className="block text-primary-red bg-gradient-to-r from-primary-red to-red-400 bg-clip-text text-transparent">
+              <span className="block text-primary-red bg-gradient-to-r from-primary-red to-red-400 bg-clip-text text-transparent drop-shadow-2xl">
                 Electronics
               </span>
             </h2>
             
             {/* Description */}
-            <p className="text-lg md:text-xl text-gray-200 leading-relaxed max-w-lg">
+            <p className="text-lg md:text-xl text-white leading-relaxed max-w-lg drop-shadow-xl font-medium">
               Discover the latest gadgets, smart devices, and cutting-edge technology that will transform your digital lifestyle. From smartphones to smart home devices, we've curated the best electronics collection for every need and budget.
             </p>
               

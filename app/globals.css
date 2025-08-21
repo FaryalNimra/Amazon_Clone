@@ -4,10 +4,1936 @@
 @tailwind utilities;
 
 @layer base {
+  /* Form validation styles - moved to components layer */
+  
+  /* Phone input validation styles */
+  .phone-counter.valid {
+    @apply text-green-600;
+  }
+  
+  .phone-counter.invalid {
+    @apply text-red-600;
+  }
+  
+  .phone-counter.neutral {
+    @apply text-gray-500;
+  }
+  
+  /* GST input validation styles */
+  .gst-counter.valid {
+    @apply text-green-600;
+  }
+  
+  .gst-counter.invalid {
+    @apply text-red-600;
+  }
+  
+  .gst-counter.neutral {
+    @apply text-gray-500;
+  }
+  
+  /* Smooth scrolling for the entire page */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Custom smooth scrolling for better cross-browser support */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* For iOS devices */
+  }
+  
+  /* Ensure smooth scrolling works on all devices */
+  @media (prefers-reduced-motion: no-preference) {
+    .smooth-scroll {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Fallback for browsers that don't support smooth scrolling */
+  @supports not (scroll-behavior: smooth) {
+    .smooth-scroll {
+      scroll-behavior: auto;
+    }
+  }
+
+  /* Mobile-specific smooth scrolling optimizations */
+  @media (max-width: 768px) {
+    .smooth-scroll {
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    
+    /* Ensure smooth scrolling works on iOS Safari */
+    .smooth-scroll * {
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+    }
+  }
+
+  /* High refresh rate displays optimization */
+  @media (min-resolution: 120dpi) {
+    .smooth-scroll {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Search dropdown stability and prevent flickering */
+  .search-dropdown {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform;
+  }
+
+  /* Prevent search input flickering */
+  .search-input {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Modal scroll prevention styles */
+  body.modal-open {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+  }
+
+  /* Ensure modals are properly positioned */
+  .modal-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 50 !important;
+  }
+
+  /* Prevent body scroll when modal is open */
+  .modal-open * {
+    overflow: visible !important;
+  }
+
+  .modal-open .modal-content {
+    overflow-y: auto !important;
+  }
+
+  /* Ensure modal backdrops cover the entire viewport */
+  .modal-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 40 !important;
+  }
+
+  /* Prevent touch scrolling on mobile when modal is open */
+  .modal-open {
+    -webkit-overflow-scrolling: auto !important;
+    touch-action: none !important;
+  }
+
+  /* Restore touch scrolling when modal is closed */
+  body:not(.modal-open) {
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: auto !important;
+  }
+
+  /* Handle iOS Safari specific issues */
+  @supports (-webkit-touch-callout: none) {
+    .modal-open {
+      position: fixed !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+  }
+
+  /* Ensure modals work properly on all devices */
+  .modal-open .modal-scrollable {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Smooth transitions for search results */
+  .search-results-enter {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  .search-results-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+  }
+
+  .search-results-exit {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .search-results-exit-active {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+  }
+
+  /* Category dropdown stability and prevent blinking */
+  .category-dropdown {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform;
+    animation: dropdownFadeIn 0.2s ease-out;
+  }
+
+  @keyframes dropdownFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Prevent category button flickering */
+  .category-button {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Smooth category dropdown transitions */
+  .category-dropdown * {
+    transition: all 0.15s ease-in-out;
+  }
+
+  /* Price range filter improvements */
+  .price-range-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e7eb;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  .price-range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ef4444;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+  }
+
+  .price-range-slider::-webkit-slider-thumb:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .price-range-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ef4444;
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+  }
+
+  .price-range-slider::-moz-range-thumb:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+  }
+
+  /* Price preset buttons */
+  .price-preset-button {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+
+  .price-preset-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .price-preset-button.active {
+    background: #ef4444 !important;
+    color: white !important;
+    border-color: #ef4444;
+  }
+
+  /* GST Number field validation styles */
+  .gst-input-valid {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+  }
+
+  .gst-input-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+  }
+
+  .gst-counter {
+    transition: all 0.2s ease;
+  }
+
+  .gst-counter.valid {
+    color: #10b981;
+    font-weight: 600;
+  }
+
+  .gst-counter.invalid {
+    color: #ef4444;
+    font-weight: 600;
+  }
+
+  .gst-counter.neutral {
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  /* Phone Number field validation styles */
+  .phone-input-valid {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+  }
+
+  .phone-input-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+  }
+
+  .phone-counter {
+    transition: all 0.2s ease;
+  }
+
+  .phone-counter.valid {
+    color: #10b981;
+    font-weight: 600;
+  }
+
+  .phone-counter.invalid {
+    color: #f97316;
+    font-weight: 600;
+  }
+
+  .phone-counter.neutral {
+    color: #6b7280;
+    font-weight: 500;
+  }
+
   body {
     font-family: 'Inter', sans-serif;
     background-color: #FFFFFF;
     color: #2C2C2C;
+  }
+  
+  /* Dark mode base styles - Pure black with high contrast */
+  .dark {
+    color-scheme: dark;
+  }
+  
+  .dark body {
+    background-color: #000000; /* Pure black background */
+    color: #E0E0E0; /* Light gray text for readability */
+  }
+  
+  .dark html {
+    background-color: #000000; /* Pure black */
+  }
+  
+  /* Dark mode for main content areas */
+  .dark main {
+    background-color: #000000; /* Pure black background */
+    color: #E0E0E0; /* Light gray text for readability */
+  }
+  
+  .dark .min-h-screen {
+    background-color: #000000; /* Pure black */
+  }
+  
+  /* Dark mode for auth containers */
+  .dark .auth-container {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .auth-card {
+    background-color: #000000; /* Pure black */
+    border-color: #FF4D4D; /* Bright red border for accent */
+  }
+  
+  /* Dark mode for form inputs */
+  .dark .auth-input {
+    background-color: #000000; /* Pure black background */
+    border-color: #FF4D4D; /* Bright red border for accent */
+    color: #E0E0E0; /* Light gray text for readability */
+  }
+  
+  .dark .auth-input::placeholder {
+    color: #9CA3AF; /* Muted but readable placeholder */
+  }
+  
+  .dark .auth-input:focus {
+    border-color: #000000; /* Brighter red on focus */
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+  
+  /* Dark mode for buttons - Bright red as requested */
+  .dark .auth-secondary-button {
+    background-color: #FF4D4D; /* Bright red background */
+    border-color: #FF4D4D; /* Bright red border */
+    color: #FFFFFF; /* White text for contrast */
+  }
+  
+  .dark .auth-secondary-button:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.4); /* Red glow */
+  }
+  
+  /* Dark mode for testimonials and footer */
+  .dark .bg-white {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .text-gray-900 {
+    color: #f9fafb;
+  }
+  
+  .dark .text-gray-700 {
+    color: #e5e7eb;
+  }
+  
+  .dark .text-gray-600 {
+    color: #d1d5db;
+  }
+  
+  .dark .text-gray-500 {
+    color: #9ca3af;
+  }
+  
+  .dark .border-gray-200 {
+    border-color: #4b5563;
+  }
+  
+  .dark .border-gray-300 {
+    border-color: #4b5563;
+  }
+  
+  /* Dark mode for headings */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: #f9fafb;
+  }
+  
+  /* Dark mode for links - Using proven color psychology */
+  .dark a {
+    color: #4DB6AC; /* Teal - professional, trustworthy */
+  }
+  
+  .dark a:hover {
+    color: #FF8787; /* Coral - friendly, engaging */
+  }
+  
+  /* Dark mode accent color for important elements */
+  .dark .accent-color {
+    color: #FF6B6B; /* Perfect accent - pops but not harsh */
+  }
+  
+  .dark .accent-bg {
+    background-color: #FF6B6B;
+  }
+  
+  /* Dark mode for product cards and grids */
+  .dark .bg-gray-50 {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .bg-gray-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .hover\:bg-gray-50:hover {
+    background-color: #FF4D4D; /* Bright red on hover */
+  }
+  
+  .dark .hover\:bg-gray-100:hover {
+    background-color: #FF6B6B; /* Brighter red on enhanced hover */
+  }
+  
+  /* Dark mode for search and category dropdowns */
+  .dark .bg-gray-800 {
+    background-color: #000000; /* Pure black background */
+  }
+
+  
+  .dark .hover\:bg-gray-700:hover {
+    background-color: #FF4D4D; /* Bright red on hover */
+  }
+  
+  .dark .hover\:bg-gray-600:hover {
+    background-color: #FF6B6B; /* Brighter red on enhanced hover */
+  }
+  
+  /* Dark mode for text colors */
+  .dark .text-gray-300 {
+    color: #d1d5db;
+  }
+  
+  .dark .text-gray-400 {
+    color: #9ca3af;
+  }
+  
+  .dark .text-gray-800 {
+    color: #e5e7eb;
+  }
+  
+  /* Dark mode for borders */
+  .dark .border-gray-700 {
+    border-color: #4b5563;
+  }
+  
+  /* Dark mode for shadows */
+  .dark .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  }
+  
+  .dark .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Dark mode for main page sections */
+  .dark .bg-white-bg {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .bg-light-gray {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-blush-pink {
+    background-color: #FF4D4D; /* Bright red background */
+  }
+  
+  .dark .hover\:bg-blush-pink:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+  
+  /* Dark mode for product grids and cards */
+  .dark .hover\:shadow-lg:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  }
+  
+  .dark .hover\:shadow-xl:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Dark mode for testimonials and footer */
+  .dark .bg-gradient-to-r {
+    background-image: linear-gradient(to right, #374151, #4b5563);
+  }
+  
+  /* Dark mode for text colors */
+  .dark .text-primary-text {
+    color: #f9fafb;
+  }
+  
+  .dark .text-text-muted {
+    color: #9ca3af;
+  }
+  
+  /* Dark mode for borders */
+  .dark .border-border-light {
+    border-color: #4b5563;
+  }
+  
+  /* Dark mode for specific components */
+  .dark .bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, #374151, #4b5563);
+  }
+  
+  .dark .bg-gradient-to-tr {
+    background-image: linear-gradient(to top right, #374151, #4b5563);
+  }
+  
+  .dark .bg-gradient-to-bl {
+    background-image: linear-gradient(to bottom left, #374151, #4b5563);
+  }
+  
+  .dark .bg-gradient-to-tl {
+    background-image: linear-gradient(to top left, #374151, #4b5563);
+  }
+  
+  /* Dark mode for hover states */
+  .dark .hover\:bg-gray-50:hover {
+    background-color: #4b5563;
+  }
+  
+  .dark .hover\:bg-gray-100:hover {
+    background-color: #6b7280;
+  }
+  
+  .dark .hover\:bg-gray-200:hover {
+    background-color: #6b7280;
+  }
+  
+  /* Dark mode for focus states */
+  .dark .focus\:ring-primary-red:focus {
+    --tw-ring-color: #ef4444;
+  }
+  
+  .dark .focus\:border-primary-red:focus {
+    border-color: #ef4444;
+  }
+  
+  /* Dark mode for disabled states */
+  .dark .disabled\:opacity-50:disabled {
+    opacity: 0.5;
+  }
+  
+  .dark .disabled\:cursor-not-allowed:disabled {
+    cursor: not-allowed;
+  }
+  
+  /* Dark mode for main page content */
+  .dark .pt-16 {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .flex-1 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .min-h-screen {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-200 {
+    background-color: #FF4D4D; /* Bright red on hover */
+  }
+  
+  /* Dark mode for all text elements */
+  .dark p {
+    color: #e5e7eb;
+  }
+  
+  .dark span {
+    color: #e5e7eb;
+  }
+  
+  .dark div {
+    color: inherit;
+  }
+  
+  /* Dark mode for sections and containers */
+  .dark section {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  
+  /* Dark mode for cards and boxes */
+  .dark .card, .dark .box {
+    background-color: #000000; /* Pure black */
+    border-color: #FF4D4D; /* Bright red border for accent */
+  }
+  
+  /* Dark mode for lists */
+  .dark ul, .dark ol {
+    background-color: #1f2937;
+  }
+  
+  .dark li {
+    color: #e5e7eb;
+  }
+  
+  /* Dark mode for tables */
+  .dark table {
+    background-color: #374151;
+  }
+  
+  .dark th, .dark td {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+  }
+  
+  /* Dark mode for specific page elements */
+  .dark .hero-section {
+    background-color: transparent; /* Allow background image to show */
+  }
+  
+  .dark .features-section {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .testimonials-section {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .footer-section {
+    background-color: #000000; /* Pure black background */
+  }
+
+  /* Dark mode for hero section - preserve background image */
+  .dark .hero-section .text-white {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .hero-section .text-gray-200 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .hero-section .text-gray-300 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .hero-section .bg-primary-red {
+    background-color: #FF4D4D; /* Bright red */
+  }
+  
+  .dark .hero-section .hover\:bg-red-600:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+  
+  .dark .hero-section .bg-white {
+    background-color: rgba(255, 255, 255, 0.2); /* Semi-transparent white */
+  }
+  
+  .dark .hero-section .hover\:bg-opacity-30:hover {
+    background-color: rgba(255, 255, 255, 0.3); /* More opaque on hover */
+  }
+
+  /* Dark mode for featured categories section - preserve background image */
+  .dark .electronics-bg {
+    background-color: transparent !important; /* Force transparent to allow background image to show */
+    background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') !important; /* Force background image */
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+  }
+  
+  .dark #featured-categories {
+    background-color: transparent !important; /* Force transparent to allow background image to show */
+  }
+  
+  .dark #featured-categories .text-white {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark #featured-categories .text-gray-200 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark #featured-categories .bg-primary-red {
+    background-color: #FF4D4D; /* Bright red */
+  }
+  
+  .dark #featured-categories .hover\:bg-red-600:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+
+  /* Ensure background image shows in both light and dark modes */
+  .electronics-bg {
+    background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* Dark mode for why choose our store section */
+  .dark .bg-light-gray {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .text-primary-text {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .text-text-muted {
+    color: #9CA3AF; /* Muted text */
+  }
+
+  /* Dark mode for featured products section */
+  .dark #featured-products {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark #featured-products .bg-white {
+    background-color: #000000; /* Pure black background */
+    border: 2px solid #FF4D4D; /* Bright red border */
+  }
+  
+  .dark #featured-products .text-primary-text {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark #featured-products .text-text-muted {
+    color: #9CA3AF; /* Muted text */
+  }
+  
+  .dark #featured-products .text-primary-red {
+    color: #FF4D4D; /* Bright red */
+  }
+  
+  .dark #featured-products .hover\:shadow-xl:hover {
+    box-shadow: 0 20px 25px -5px rgba(255, 77, 77, 0.3), 0 10px 10px -5px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+
+  /* Dark mode for today's deals section */
+  .dark .todays-deals {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .todays-deals .bg-white {
+    background-color: #000000; /* Pure black background */
+    border: 2px solid #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .todays-deals .text-gray-900 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .todays-deals .text-gray-700 {
+    color: #E0E0E0; /* Light gray text */
+  }
+
+  /* Dark mode for Today's Deals component specific styles */
+  .dark .bg-gradient-to-br.from-red-50.to-orange-50 {
+    background: linear-gradient(to bottom right, #000000, #000000); /* Pure black gradient */
+  }
+  
+  .dark .bg-white.bg-opacity-90 {
+    background-color: rgba(0, 0, 0, 0.9); /* Semi-transparent black */
+    border: 1px solid #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .text-green-600 {
+    color: #10B981; /* Keep green color for savings text */
+  }
+  
+  .dark .border-gray-100 {
+    border-color: #374151; /* Dark gray border instead of red */
+  }
+
+  /* Dark mode for message display */
+  .dark .bg-yellow-100 {
+    background-color: #000000; /* Black background instead of red */
+  }
+  
+  .dark .border-yellow-400 {
+    border-color: #F59E0B; /* Keep yellow border for accent */
+  }
+  
+  .dark .text-yellow-800 {
+    color: #F59E0B; /* Keep yellow text for readability */
+  }
+  
+  .dark .text-yellow-600 {
+    color: #F59E0B; /* Keep yellow text for readability */
+  }
+  
+  .dark .hover\:text-yellow-800:hover {
+    color: #FBBF24; /* Brighter yellow on hover */
+  }
+
+  /* Dark mode for test cart link */
+  .dark .bg-blue-600 {
+    background-color: #2563EB; /* Keep blue background */
+  }
+  
+  .dark .hover\:bg-blue-700:hover {
+    background-color: #1D4ED8; /* Darker blue on hover */
+  }
+
+  /* Dark mode for all sections and containers */
+  .dark section {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  /* Exclude featured categories section from black background to preserve background image */
+  .dark #featured-categories,
+  .dark #featured-categories section {
+    background-color: transparent !important; /* Allow background image to show */
+  }
+  
+  /* General rule: any section with background image should not have black overlay */
+  .dark section[style*="background-image"],
+  .dark section[class*="bg-"]:not([class*="bg-black"]):not([class*="bg-gray"]):not([class*="bg-white"]) {
+    background-color: transparent !important; /* Allow background images to show */
+  }
+  
+  /* Specific sections that should preserve background images */
+  .dark .hero-section,
+  .dark .electronics-bg,
+  .dark #featured-categories,
+  .dark [class*="banner"],
+  .dark [class*="hero"] {
+    background-color: transparent !important; /* Allow background images to show */
+  }
+  
+  /* Fix category page banner - remove grey gradient overlay */
+  .dark .bg-gradient-to-r.from-gray-900.to-gray-800,
+  .dark .bg-gradient-to-r.from-gray-800.to-gray-900,
+  .dark .bg-gradient-to-r.from-gray-900.to-gray-700,
+  .dark .bg-gradient-to-r.from-gray-700.to-gray-900 {
+    background: none !important; /* Remove gradient overlay */
+    background-color: transparent !important; /* Make background transparent */
+  }
+  
+  /* Target category page banner specifically */
+  .dark section[class*="bg-gradient-to-r"] {
+    background: none !important; /* Remove any gradient backgrounds */
+    background-color: transparent !important; /* Make transparent */
+  }
+  
+  /* Ensure any section with background image has transparent background in dark mode */
+  .dark section[style*="backgroundImage"],
+  .dark section[style*="background-image"] {
+    background: none !important; /* Remove any background */
+    background-color: transparent !important; /* Make transparent */
+  }
+  
+  /* Target the specific category page banner structure */
+  .dark section.relative.h-64,
+  .dark section.relative.h-80 {
+    background: none !important; /* Remove any background */
+    background-color: transparent !important; /* Make transparent */
+  }
+  
+  /* Remove black backgrounds from banner text areas */
+  .dark section.relative.h-64 .max-w-7xl,
+  .dark section.relative.h-80 .max-w-7xl,
+  .dark section.relative.h-64 .mx-auto,
+  .dark section.relative.h-80 .mx-auto,
+  .dark section.relative.h-64 .px-4,
+  .dark section.relative.h-80 .px-4,
+  .dark section.relative.h-64 .sm\:px-6,
+  .dark section.relative.h-80 .sm\:px-6,
+  .dark section.relative.h-64 .lg\:px-8,
+  .dark section.relative.h-80 .lg\:px-8,
+  .dark section.relative.h-64 .w-full,
+  .dark section.relative.h-80 .w-full {
+    background-color: transparent !important; /* Remove black backgrounds from text containers */
+  }
+  
+  /* Remove black backgrounds from breadcrumb and text elements */
+  .dark section.relative.h-64 nav,
+  .dark section.relative.h-80 nav,
+  .dark section.relative.h-64 .mb-4,
+  .dark section.relative.h-80 .mb-4,
+  .dark section.relative.h-64 .mb-3,
+  .dark section.relative.h-80 .mb-3 {
+    background-color: transparent !important; /* Remove black backgrounds from navigation */
+  }
+  
+  /* Remove black backgrounds from category indicator and clear filter button */
+  .dark section.relative.h-64 .bg-primary-red\/20,
+  .dark section.relative.h-80 .bg-primary-red\/20,
+  .dark section.relative.h-64 .bg-white\/20,
+  .dark section.relative.h-80 .bg-white\/20 {
+    background-color: transparent !important; /* Remove semi-transparent backgrounds */
+  }
+  
+  /* Dark mode for product cards - ensure black backgrounds */
+  .dark .bg-white {
+    background-color: #000000 !important; /* Force black background for product cards */
+  }
+  
+  /* Dark mode for product card borders - use dark gray instead of red */
+  .dark .border-gray-100 {
+    border-color: #374151 !important; /* Dark gray border for product cards */
+  }
+  
+  /* Keep red only for interactive elements like buttons and hover effects */
+  .dark .bg-primary-red {
+    background-color: #FF4D4D; /* Keep red for primary buttons */
+  }
+  
+  .dark .hover\:bg-red-600:hover {
+    background-color: #FF6B6B; /* Keep red for hover effects */
+  }
+  
+  .dark .text-primary-red {
+    color: #FF4D4D; /* Keep red for primary text accents */
+  }
+  
+  /* Product card specific styling - ensure consistent black backgrounds */
+  .dark .ProductsGrid .bg-white,
+  .dark .TodaysDeals .bg-white {
+    background-color: #000000 !important; /* Black background for product cards */
+  }
+  
+  .dark .container {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .max-w-7xl {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .max-w-6xl {
+    background-color: #000000; /* Pure black */
+  }
+  
+  /* Exclude featured categories containers from black background */
+  .dark #featured-categories .container,
+  .dark #featured-categories .max-w-7xl,
+  .dark #featured-categories .max-w-6xl {
+    background-color: transparent !important; /* Allow background image to show */
+  }
+  
+  /* Comprehensive exclusion for featured categories - prevent any black backgrounds */
+  .dark #featured-categories * {
+    background-color: transparent !important; /* Force transparent for all child elements */
+  }
+  
+  /* But allow specific elements to have their intended backgrounds */
+  .dark #featured-categories .bg-primary-red,
+  .dark #featured-categories .hover\:bg-red-600:hover,
+  .dark #featured-categories .text-white,
+  .dark #featured-categories .text-gray-200 {
+    background-color: inherit !important; /* Allow these specific elements to work */
+  }
+  
+  .dark #featured-categories .bg-primary-red {
+    background-color: #FF4D4D !important; /* Keep red for buttons */
+  }
+  
+  .dark #featured-categories .hover\:bg-red-600:hover {
+    background-color: #FF6B6B !important; /* Keep red for hover effects */
+  }
+  
+  /* Additional rule: any element with background image should not have black overlay */
+  .dark [style*="background-image"],
+  .dark [class*="bg-"]:not([class*="bg-black"]):not([class*="bg-gray"]):not([class*="bg-white"]) {
+    background-color: transparent !important; /* Allow background images to show */
+  }
+  
+  /* Force transparent backgrounds for any element that might have background images */
+  .dark [class*="bg-gradient"],
+  .dark [class*="bg-"]:not([class*="bg-black"]):not([class*="bg-gray"]):not([class*="bg-white"]):not([class*="bg-primary-red"]) {
+    background-color: transparent !important; /* Allow background images and gradients to show */
+  }
+
+  /* Dark mode for footer - keep all styling, just change background */
+  .dark footer {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-900 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-800 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-700 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-600 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-500 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-400 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-300 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-200 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-100 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .bg-gray-50 {
+    background-color: #000000 !important; /* Pure black background */
+  }
+  
+  .dark footer .border-gray-800 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  .dark footer .border-gray-700 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  .dark footer .border-gray-600 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  .dark footer .border-gray-500 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  .dark footer .border-gray-400 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  .dark footer .border-gray-300 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  .dark footer .border-gray-200 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  .dark footer .border-gray-100 {
+    border-color: #FF4D4D !important; /* Bright red border */
+  }
+  
+  /* Target Footer component specifically to ensure all grey backgrounds are black */
+  .dark .Footer,
+  .dark footer[class*="bg-gray"] {
+    background-color: #000000 !important; /* Force black background */
+  }
+  
+  /* Additional footer-specific rules to ensure all grey backgrounds are black */
+  .dark footer input,
+  .dark footer button,
+  .dark footer a,
+  .dark footer div {
+    background-color: #000000 !important; /* Force black background for all footer elements */
+  }
+  
+  /* But allow specific elements to keep their intended backgrounds */
+  .dark footer .bg-primary-red,
+  .dark footer .hover\:bg-primary-red:hover {
+    background-color: #FF4D4D !important; /* Keep red for primary buttons */
+  }
+  
+  .dark footer .hover\:bg-red-600:hover {
+    background-color: #FF6B6B !important; /* Keep red for hover effects */
+  }
+  
+  /* Comprehensive footer grey background override */
+  .dark footer [class*="bg-gray"],
+  .dark footer [class*="bg-gray-"] {
+    background-color: #000000 !important; /* Force all grey backgrounds to black */
+  }
+  
+  /* Ensure newsletter input and social media icons have black backgrounds */
+  .dark footer input[class*="bg-gray"],
+  .dark footer a[class*="bg-gray"] {
+    background-color: #000000 !important; /* Force black background for inputs and links */
+  }
+  
+  /* Ultra-aggressive footer grey background override - target everything */
+  .dark footer *,
+  .dark footer *::before,
+  .dark footer *::after {
+    background-color: #000000 !important; /* Force black background for ALL footer elements */
+  }
+  
+  /* But preserve specific elements that should keep their backgrounds */
+  .dark footer .bg-primary-red,
+  .dark footer .hover\:bg-primary-red:hover,
+  .dark footer .hover\:bg-red-600:hover,
+  .dark footer .text-primary-red,
+  .dark footer .text-white,
+  .dark footer .text-gray-300,
+  .dark footer .text-gray-400,
+  .dark footer .text-gray-500 {
+    background-color: transparent !important; /* Allow text colors to work */
+  }
+  
+  /* Force black backgrounds for specific grey classes */
+  .dark footer .bg-gray-50,
+  .dark footer .bg-gray-100,
+  .dark footer .bg-gray-200,
+  .dark footer .bg-gray-300,
+  .dark footer .bg-gray-400,
+  .dark footer .bg-gray-500,
+  .dark footer .bg-gray-600,
+  .dark footer .bg-gray-700,
+  .dark footer .bg-gray-800,
+  .dark footer .bg-gray-900 {
+    background-color: #000000 !important; /* Force black for all grey backgrounds */
+  }
+  
+  /* Target Footer component by multiple possible selectors */
+  .dark .Footer,
+  .dark .footer,
+  .dark [class*="Footer"],
+  .dark [class*="footer"],
+  .dark footer[class*="bg-gray"],
+  .dark footer[class*="bg-gray-"] {
+    background-color: #000000 !important; /* Force black background */
+  }
+  
+  /* Target any element inside footer that might have grey background */
+  .dark footer [class*="bg-gray"],
+  .dark footer [class*="bg-gray-"],
+  .dark footer [class*="bg-"]:not([class*="bg-primary-red"]):not([class*="bg-red"]):not([class*="bg-black"]) {
+    background-color: #000000 !important; /* Force black for any background except red and black */
+  }
+  
+  /* Maximum specificity override for footer grey backgrounds */
+  html body .dark footer,
+  html body .dark footer *,
+  html body .dark footer *::before,
+  html body .dark footer *::after {
+    background-color: #000000 !important; /* Maximum specificity override */
+  }
+  
+  /* But preserve text colors and red elements */
+  html body .dark footer .text-primary-red,
+  html body .dark footer .text-white,
+  html body .dark footer .text-gray-300,
+  html body .dark footer .text-gray-400,
+  html body .dark footer .text-gray-500,
+  html body .dark footer .bg-primary-red,
+  html body .dark footer .hover\:bg-primary-red:hover,
+  html body .dark footer .hover\:bg-red-600:hover {
+    background-color: transparent !important; /* Allow these to work properly */
+  }
+  
+  html body .dark footer .bg-primary-red {
+    background-color: #FF4D4D !important; /* Keep red for buttons */
+  }
+  
+  html body .dark footer .hover\:bg-primary-red:hover {
+    background-color: #FF4D4D !important; /* Keep red for buttons */
+  }
+  
+  html body .dark footer .hover\:bg-red-600:hover {
+    background-color: #FF6B6B !important; /* Keep red for hover effects */
+  }
+
+  /* Dark mode for floating elements and decorative items */
+  .dark .bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, #FF4D4D, #FF6B6B); /* Red gradient */
+  }
+  
+  .dark .bg-gradient-to-r {
+    background-image: linear-gradient(to right, #FF4D4D, #FF6B6B); /* Red gradient */
+  }
+  
+  .dark .shadow-red-500\/50 {
+    box-shadow: 0 25px 50px -12px rgba(255, 77, 77, 0.5); /* Red shadow */
+  }
+
+  /* Dark mode for scroll indicator */
+  .dark .border-white {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  /* Note: .dark .bg-white is handled separately for product cards to ensure black backgrounds */
+
+  /* Dark mode for all text elements - comprehensive coverage */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark p {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark span {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark div {
+    color: inherit;
+  }
+  
+  .dark label {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark strong {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark em {
+    color: #E0E0E0; /* Light gray text */
+  }
+
+  /* Dark mode for all interactive elements */
+  .dark button {
+    background-color: #FF4D4D; /* Bright red background */
+    border-color: #FF4D4D; /* Bright red border */
+    color: #FFFFFF; /* White text */
+  }
+  
+  .dark button:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.4); /* Red glow */
+  }
+  
+  .dark .btn {
+    background-color: #FF4D4D; /* Bright red background */
+    border-color: #FF4D4D; /* Bright red border */
+    color: #FFFFFF; /* White text */
+  }
+  
+  .dark .btn:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.4); /* Red glow */
+  }
+
+  /* Dark mode for all form elements */
+  .dark input {
+    background-color: #000000; /* Pure black background */
+    border-color: #FF4D4D; /* Bright red border */
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark input:focus {
+    border-color: #FF6B6B; /* Brighter red on focus */
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+  
+  .dark input::placeholder {
+    color: #9CA3AF; /* Muted placeholder */
+  }
+  
+  .dark textarea {
+    background-color: #000000; /* Pure black background */
+    border-color: #FF4D4D; /* Bright red border */
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark textarea:focus {
+    border-color: #FF6B6B; /* Brighter red on focus */
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+  
+  .dark select {
+    background-color: #000000; /* Pure black background */
+    border-color: #FF4D4D; /* Bright red border */
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark select:focus {
+    border-color: #FF6B6B; /* Brighter red on focus */
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+
+  /* Dark mode for all links */
+  .dark a {
+    color: #FF4D4D; /* Bright red links */
+  }
+  
+  .dark .hover\:text-yellow-800:hover {
+    color: #E0E0E0; /* Light gray on hover */
+  }
+
+  /* Dark mode for all icons */
+  .dark svg {
+    color: inherit; /* Inherit text color */
+  }
+  
+  .dark .text-primary-red {
+    color: #FF4D4D; /* Bright red */
+  }
+  
+  .dark .text-yellow-400 {
+    color: #FFD700; /* Keep yellow for stars */
+  }
+  
+  .dark .text-gray-300 {
+    color: #9CA3AF; /* Muted gray */
+  }
+
+  /* Dark mode for all backgrounds - comprehensive coverage */
+  .dark .bg-white-bg {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .bg-light-gray {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-200 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-800 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-900 {
+    background-color: #000000; /* Pure black */
+  }
+
+  /* Dark mode for all borders */
+  .dark .border-gray-200 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-300 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-600 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-700 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-border-light {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+
+  /* Dark mode for all shadows and hover effects */
+  .dark .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(255, 77, 77, 0.3), 0 4px 6px -2px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+  
+  .dark .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(255, 77, 77, 0.3), 0 10px 10px -5px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+  
+  .dark .hover\:shadow-lg:hover {
+    box-shadow: 0 10px 15px -3px rgba(255, 77, 77, 0.4), 0 4px 6px -2px rgba(255, 77, 77, 0.3); /* Enhanced red glow */
+  }
+  
+  .dark .hover\:shadow-xl:hover {
+    box-shadow: 0 20px 25px -5px rgba(255, 77, 77, 0.4), 0 10px 10px -5px rgba(255, 77, 77, 0.3); /* Enhanced red glow */
+  }
+
+  /* Dark mode for all hover states */
+  .dark .hover\:bg-gray-50:hover {
+    background-color: #FF4D4D; /* Bright red on hover */
+  }
+  
+  .dark .hover\:bg-gray-100:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+  
+  .dark .hover\:bg-gray-200:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+  
+  .dark .hover\:bg-gray-600:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+  
+  .dark .hover\:bg-gray-700:hover {
+    background-color: #FF4D4D; /* Bright red on hover */
+  }
+
+  /* Dark mode for all focus states */
+  .dark .focus\:ring-primary-red:focus {
+    --tw-ring-color: #FF4D4D; /* Bright red ring */
+  }
+  
+  .dark .focus\:border-primary-red:focus {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+
+  /* Dark mode for all disabled states */
+  .dark .disabled\:opacity-50:disabled {
+    opacity: 0.5;
+  }
+  
+  .dark .disabled\:cursor-not-allowed:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Dark mode for all modals and overlays */
+  .dark .modal, .dark .overlay {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .modal-content {
+    background-color: #000000; /* Pure black */
+    border-color: #FF4D4D; /* Bright red border */
+  }
+
+  /* Dark mode for all tooltips */
+  .dark .dark .tooltip {
+    background-color: #000000; /* Pure black background */
+    color: #E0E0E0; /* Light gray text */
+    border-color: #FF4D4D; /* Bright red border */
+  }
+
+  /* Dark mode for all scrollbars */
+  .dark ::-webkit-scrollbar-track {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: #FF4D4D; /* Bright red scrollbar */
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+
+  /* Dark mode for all selection */
+  .dark ::selection {
+    background-color: #FF4D4D; /* Bright red selection */
+    color: #ffffff;
+  }
+  
+  .dark ::-moz-selection {
+    background-color: #FF4D4D; /* Bright red selection */
+    color: #ffffff;
+  }
+
+  /* Dark mode red glowing borders for specific elements */
+  /* Product Cards - Red glowing border */
+  .dark .bg-white.border-gray-100,
+  .dark .bg-white.border-gray-200,
+  .dark .bg-white.border-gray-300,
+  .dark .ProductsGrid .bg-white,
+  .dark .TodaysDeals .bg-white,
+  .dark [class*="product-card"],
+  .dark [class*="ProductCard"] {
+    border: 2px solid #FF4D4D !important;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.3), 0 0 20px rgba(255, 77, 77, 0.2), 0 0 30px rgba(255, 77, 77, 0.1) !important;
+    transition: all 0.3s ease-in-out !important;
+  }
+
+  .dark .bg-white.border-gray-100:hover,
+  .dark .bg-white.border-gray-200:hover,
+  .dark .bg-white.border-gray-300:hover,
+  .dark .ProductsGrid .bg-white:hover,
+  .dark .TodaysDeals .bg-white:hover,
+  .dark [class*="product-card"]:hover,
+  .dark [class*="ProductCard"]:hover {
+    border-color: #FF6B6B !important;
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.4), 0 0 25px rgba(255, 107, 107, 0.3), 0 0 35px rgba(255, 107, 107, 0.2) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  /* Testimonials - Red glowing border */
+  .dark .testimonials-section .bg-white,
+  .dark .testimonials-section .bg-gray-50,
+  .dark .testimonials-section .bg-gray-100,
+  .dark [class*="testimonial"],
+  .dark [class*="Testimonial"],
+  .dark .TestimonialsCarousel .bg-white,
+  .dark .TestimonialsCarousel .bg-gray-50,
+  .dark .TestimonialsCarousel .bg-gray-100 {
+    border: 2px solid #FF4D4D !important;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.3), 0 0 20px rgba(255, 77, 77, 0.2), 0 0 30px rgba(255, 77, 77, 0.1) !important;
+    transition: all 0.3s ease-in-out !important;
+  }
+
+  .dark .testimonials-section .bg-white:hover,
+  .dark .testimonials-section .bg-gray-50:hover,
+  .dark .testimonials-section .bg-gray-100:hover,
+  .dark [class*="testimonial"]:hover,
+  .dark [class*="Testimonial"]:hover,
+  .dark .TestimonialsCarousel .bg-white:hover,
+  .dark .TestimonialsCarousel .bg-gray-50:hover,
+  .dark .TestimonialsCarousel .bg-gray-100:hover {
+    border-color: #FF6B6B !important;
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.4), 0 0 25px rgba(255, 107, 107, 0.3), 0 0 35px rgba(255, 107, 107, 0.2) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  /* Buttons - Red glowing border and enhanced glow */
+  .dark .auth-button,
+  .dark .auth-secondary-button,
+  .dark .btn,
+  .dark button,
+  .dark [class*="sign-in"],
+  .dark [class*="sign-up"],
+  .dark [class*="SignIn"],
+  .dark [class*="SignUp"],
+  .dark [class*="add-to-cart"],
+  .dark [class*="AddToCart"],
+  .dark .bg-primary-red,
+  .dark .hover\:bg-red-600,
+  .dark .bg-red-600 {
+    border: 2px solid #FF4D4D !important;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.4), 0 0 20px rgba(255, 77, 77, 0.3), 0 0 30px rgba(255, 77, 77, 0.2) !important;
+    transition: all 0.3s ease-in-out !important;
+  }
+
+  .dark .auth-button:hover,
+  .dark .auth-secondary-button:hover,
+  .dark .btn:hover,
+  .dark button:hover,
+  .dark [class*="sign-in"]:hover,
+  .dark [class*="sign-up"]:hover,
+  .dark [class*="SignIn"]:hover,
+  .dark [class*="SignUp"]:hover,
+  .dark [class*="add-to-cart"]:hover,
+  .dark [class*="AddToCart"]:hover,
+  .dark .bg-primary-red:hover,
+  .dark .hover\:bg-red-600:hover,
+  .dark .bg-red-600:hover {
+    border-color: #FF6B6B !important;
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.5), 0 0 25px rgba(255, 107, 107, 0.4), 0 0 35px rgba(255, 107, 107, 0.3) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  /* Focus states for buttons with enhanced glow */
+  .dark .auth-button:focus,
+  .dark .auth-secondary-button:focus,
+  .dark .btn:focus,
+  .dark button:focus,
+  .dark [class*="sign-in"]:focus,
+  .dark [class*="sign-up"]:focus,
+  .dark [class*="SignIn"]:focus,
+  .dark [class*="SignUp"]:focus,
+  .dark [class*="add-to-cart"]:focus,
+  .dark [class*="AddToCart"]:focus {
+    border-color: #FF6B6B !important;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.6), 0 0 30px rgba(255, 107, 107, 0.4), 0 0 40px rgba(255, 107, 107, 0.3) !important;
+    outline: none !important;
+  }
+
+  /* Active states for buttons */
+  .dark .auth-button:active,
+  .dark .auth-secondary-button:active,
+  .dark .btn:active,
+  .dark button:active,
+  .dark [class*="sign-in"]:active,
+  .dark [class*="sign-up"]:active,
+  .dark [class*="SignIn"]:active,
+  .dark [class*="SignUp"]:active,
+  .dark [class*="add-to-cart"]:active,
+  .dark [class*="AddToCart"]:active {
+    transform: translateY(0) scale(0.98) !important;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.3), 0 0 20px rgba(255, 77, 77, 0.2) !important;
+  }
+
+  /* Enhanced glow for primary action buttons */
+  .dark .bg-primary-red,
+  .dark .auth-button {
+    box-shadow: 0 0 15px rgba(255, 77, 77, 0.5), 0 0 25px rgba(255, 77, 77, 0.3), 0 0 35px rgba(255, 77, 77, 0.2) !important;
+  }
+
+  .dark .bg-primary-red:hover,
+  .dark .auth-button:hover {
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.6), 0 0 30px rgba(255, 107, 107, 0.4), 0 0 40px rgba(255, 107, 107, 0.3) !important;
+  }
+  
+  /* Dark mode utility classes for accent colors */
+  .dark .text-accent {
+    color: #FF6B6B; /* Perfect accent - pops but not harsh */
+  }
+  
+  .dark .bg-accent {
+    background-color: #FF6B6B;
+  }
+  
+  .dark .border-accent {
+    border-color: #FF6B6B;
+  }
+  
+  .dark .text-link {
+    color: #FF4D4D; /* Bright red links */
+  }
+  
+  .dark .text-link-hover {
+    color: #FF6B6B; /* Brighter red on hover */
+  }
+
+  /* Additional dark mode coverage for any remaining elements */
+  .dark .bg-red-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-orange-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-yellow-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-blue-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-green-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-purple-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-pink-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-indigo-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-50 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-200 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-300 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-400 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-500 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-600 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-700 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-800 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-gray-900 {
+    background-color: #000000; /* Pure black */
+  }
+
+  /* Dark mode for any remaining text colors */
+  .dark .text-gray-100 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .text-gray-200 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .text-gray-300 {
+    color: #9CA3AF; /* Muted gray */
+  }
+  
+  .dark .text-gray-400 {
+    color: #9CA3AF; /* Muted gray */
+  }
+  
+  .dark .text-gray-500 {
+    color: #9CA3AF; /* Muted gray */
+  }
+  
+  .dark .text-gray-600 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .text-gray-700 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .text-gray-800 {
+    color: #E0E0E0; /* Light gray text */
+  }
+  
+  .dark .text-gray-900 {
+    color: #E0E0E0; /* Light gray text */
+  }
+
+  /* Dark mode for any remaining border colors */
+  .dark .border-gray-100 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-200 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-300 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-400 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-500 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-600 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-700 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-800 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+  
+  .dark .border-gray-900 {
+    border-color: #FF4D4D; /* Bright red border */
+  }
+
+  /* Dark mode for any remaining background colors */
+  .dark .bg-red-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-orange-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-yellow-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-blue-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-green-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-purple-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-pink-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  .dark .bg-indigo-100 {
+    background-color: #000000; /* Pure black */
+  }
+  
+  /* Dark mode for buttons and interactive elements */
+  .dark .btn, .dark button {
+    background-color: #FF4D4D; /* Bright red background */
+    border-color: #FF4D4D; /* Bright red border */
+    color: #FFFFFF; /* White text for contrast */
+  }
+  
+  .dark .btn:hover, .dark button:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.4); /* Red glow */
+  }
+  
+  /* Dark mode for form elements */
+  .dark input, .dark textarea, .dark select {
+    background-color: #000000; /* Pure black background */
+    border-color: #FF4D4D; /* Bright red border for accent */
+    color: #E0E0E0; /* Light gray text for readability */
+  }
+  
+  .dark input::placeholder, .dark textarea::placeholder {
+    color: #9CA3AF; /* Muted but readable placeholder */
+  }
+  
+  .dark input:focus, .dark textarea:focus, .dark select:focus {
+    border-color: #FF6B6B; /* Brighter red on focus */
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.2); /* Red glow */
+  }
+  
+  /* Dark mode for modals and overlays */
+  .dark .modal, .dark .overlay {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark .modal-content {
+    background-color: #000000; /* Pure black */
+    border-color: #FF4D4D; /* Bright red border for accent */
+  }
+  
+  /* Dark mode for tooltips */
+  .dark .tooltip {
+    background-color: #000000; /* Pure black background */
+    color: #E0E0E0; /* Light gray text for readability */
+    border-color: #FF4D4D; /* Bright red border for accent */
+  }
+  
+  /* Dark mode for scrollbars */
+  .dark ::-webkit-scrollbar-track {
+    background-color: #000000; /* Pure black background */
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: #FF4D4D; /* Bright red scrollbar */
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #FF6B6B; /* Brighter red on hover */
+  }
+  
+  /* Dark mode for selection */
+  .dark ::selection {
+    background-color: #ef4444;
+    color: #ffffff;
+  }
+  
+  .dark ::-moz-selection {
+    background-color: #FF4D4D; /* Bright red selection */
+    color: #ffffff;
+  }
+  
+  /* Dark mode utility classes for accent colors */
+  .dark .text-accent {
+    color: #FF6B6B; /* Perfect accent - pops but not harsh */
+  }
+  
+  .dark .bg-accent {
+    background-color: #FF6B6B;
+  }
+  
+  .dark .border-accent {
+    border-color: #FF6B6B;
+  }
+  
+  .dark .text-link {
+    color: #4DB6AC; /* Teal - professional, trustworthy */
+  }
+  
+  .dark .text-link-hover {
+    color: #FF8787; /* Coral - friendly, engaging */
   }
   
   h1, h2, h3, h4, h5, h6 {

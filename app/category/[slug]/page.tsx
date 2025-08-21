@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -19,26 +20,51 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { Product, supabase } from '@/lib/supabase'
 import AddToCartButton from '@/components/AddToCartButton'
+import { useProductSearch } from '@/hooks/useProductSearch'
 
 const CategoryPage = ({ params }: { params: { slug: string } }) => {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
   const [sortBy, setSortBy] = useState('popularity')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showFilters, setShowFilters] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [priceRange, setPriceRange] = useState([0, 1000])
+  const [priceRange, setPriceRange] = useState([0, 10000])
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(12)
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
+  // Ref for smooth scrolling to product list
+  const productListRef = useRef<HTMLDivElement>(null)
+  
+  // Use the search hook for better search functionality
+  const { results: searchResults, loading: isSearching, searchProducts, clearResults } = useProductSearch()
+
+  // Get selected category from URL query parameters
+  const selectedCategoryFromURL = searchParams.get('category')
+
+  // Update selectedCategories when URL category changes
+  useEffect(() => {
+    if (selectedCategoryFromURL && selectedCategoryFromURL !== 'All') {
+      setSelectedCategories([selectedCategoryFromURL])
+      console.log('Updated selectedCategories from URL:', selectedCategoryFromURL)
+    } else {
+      setSelectedCategories([])
+    }
+  }, [selectedCategoryFromURL])
 
   // Get category info based on slug
   const getCategoryInfo = (slug: string) => {
     const categoryMap: { [key: string]: { name: string; description: string } } = {
       'electronics': {
-        name: 'Electronics',
-        description: 'Discover the latest gadgets, devices, and electronic accessories'
+        name: selectedCategoryFromURL && selectedCategoryFromURL !== 'All' ? selectedCategoryFromURL : 'Electronics',
+        description: selectedCategoryFromURL && selectedCategoryFromURL !== 'All' 
+          ? `Discover the latest ${selectedCategoryFromURL.toLowerCase()} and devices`
+          : 'Discover the latest gadgets, devices, and electronic accessories'
       },
       'mobile-phones': {
         name: 'Mobile Phones',
@@ -106,39 +132,204 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
     const fetchProducts = async () => {
       try {
         console.log('Fetching products for category:', categoryName, 'slug:', params.slug)
+        console.log('Selected category from URL:', selectedCategoryFromURL)
         
         let query = supabase
           .from('products')
           .select('*')
           .order('created_at', { ascending: false })
 
+        let data: any[] = []
+
         // Handle main Fashion category - fetch all fashion subcategories
         if (params.slug === 'fashion') {
           query = query.in('category', ['Men\'s Clothing', 'Women\'s Clothing', 'Kids\' Fashion', 'Shoes', 'Bags'])
         } else if (params.slug === 'electronics') {
-          // Show ALL products for Electronics page (not just Electronics category)
-          query = supabase
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: false })
+          // If a specific category is selected from URL, filter by that category
+          if (selectedCategoryFromURL && selectedCategoryFromURL !== 'All') {
+            console.log('Filtering by selected category:', selectedCategoryFromURL)
+            
+            // Get category variations for better matching (similar to navbar logic)
+            const getCategoryVariations = (category: string) => {
+              const categoryMap: { [key: string]: string[] } = {
+                'Smartphones': ['Smartphones', 'Mobile Phones', 'Phones', 'iPhone', 'Android', 'Mobile', 'Smartphone'],
+                'Laptops': ['Laptops', 'Notebooks', 'Computers', 'PC', 'MacBook', 'Laptop'],
+                'Tablets': ['Tablets', 'iPad', 'Android Tablet', 'Tablet'],
+                'Headphones': ['Headphones', 'Earphones', 'Audio', 'Sound', 'Music'],
+                'Cameras': ['Cameras', 'Photography', 'DSLR', 'Mirrorless', 'Digital Camera'],
+                'Gaming': ['Gaming', 'Games', 'Console', 'PlayStation', 'Xbox', 'Nintendo'],
+                'Smart Home': ['Smart Home', 'Home Automation', 'IoT', 'Smart Devices'],
+                'Wearables': ['Wearables', 'Smartwatch', 'Fitness Tracker', 'Watch'],
+                'Accessories': ['Accessories', 'Chargers', 'Cases', 'Cables', 'Adapters']
+              }
+              return categoryMap[category] || [category]
+            }
+            
+            const categoryVariations = getCategoryVariations(selectedCategoryFromURL)
+            console.log('Category variations to search:', categoryVariations)
+            
+            // First, try to find products by exact category match
+            let foundProducts: any[] = []
+            
+            for (const catVariation of categoryVariations) {
+              const { data: variationData, error: variationError } = await supabase
+                .from('products')
+                .select('*')
+                .eq('category', catVariation)
+                .order('created_at', { ascending: false })
+              
+              if (variationError) {
+                console.error('Error fetching category variation:', catVariation, variationError)
+                continue
+              }
+              
+              if (variationData && variationData.length > 0) {
+                console.log('Found', variationData.length, 'products in category variation:', catVariation)
+                foundProducts = [...foundProducts, ...variationData]
+              }
+            }
+            
+            // If we found products in category variations, use those
+            if (foundProducts.length > 0) {
+              console.log('Total products found in category variations:', foundProducts.length)
+              data = foundProducts
+            } else {
+              // Fallback: search by name containing the category keywords
+              console.log('No products found in category variations, trying broader search...')
+              
+              // Create a broader search query that looks for products containing category-related keywords
+              const getSearchKeywords = (category: string) => {
+                const keywords: string[] = []
+                const lowerCaseCategory = category.toLowerCase()
+                
+                if (lowerCaseCategory.includes('smartphone')) {
+                  keywords.push('smartphone', 'mobile phone', 'phone', 'iphone', 'android')
+                }
+                if (lowerCaseCategory.includes('laptop')) {
+                  keywords.push('laptop', 'notebook', 'computer', 'pc', 'macbook')
+                }
+                if (lowerCaseCategory.includes('tablet')) {
+                  keywords.push('tablet', 'ipad')
+                }
+                if (lowerCaseCategory.includes('headphones')) {
+                  keywords.push('headphones', 'earphones', 'audio', 'sound', 'music')
+                }
+                if (lowerCaseCategory.includes('camera')) {
+                  keywords.push('camera', 'photography', 'dslr', 'mirrorless', 'digital camera')
+                }
+                if (lowerCaseCategory.includes('gaming')) {
+                  keywords.push('gaming', 'games', 'console', 'playstation', 'xbox', 'nintendo')
+                }
+                if (lowerCaseCategory.includes('smart home')) {
+                  keywords.push('smart home', 'home automation', 'iot', 'smart devices')
+                }
+                if (lowerCaseCategory.includes('wearables')) {
+                  keywords.push('wearables', 'smartwatch', 'fitness tracker', 'watch')
+                }
+                if (lowerCaseCategory.includes('accessories')) {
+                  keywords.push('accessories', 'chargers', 'cases', 'cables', 'adapters')
+                }
+                return keywords
+              }
+
+              const searchKeywords = getSearchKeywords(selectedCategoryFromURL)
+              console.log('Search keywords:', searchKeywords)
+              
+              // Create OR query for multiple keywords
+              const orConditions = searchKeywords.map(keyword => `name.ilike.%${keyword}%,description.ilike.%${keyword}%`).join(',')
+              console.log('OR conditions:', orConditions)
+              
+              const { data: nameSearchData, error: nameSearchError } = await supabase
+                .from('products')
+                .select('*')
+                .or(orConditions)
+                .order('created_at', { ascending: false })
+              
+              if (nameSearchError) {
+                console.error('Error in name search:', nameSearchError)
+              } else {
+                data = nameSearchData || []
+                console.log('Products found by broader search:', data.length)
+              }
+              
+              // If still no products found, try an even broader search
+              if (data.length === 0) {
+                console.log('Still no products found, trying very broad search...')
+                
+                // Try searching for products that contain any word from the category
+                const categoryWords = selectedCategoryFromURL.toLowerCase().split(' ')
+                console.log('Category words to search:', categoryWords)
+                
+                // Search in both name and description
+                const { data: broadSearchData, error: broadSearchError } = await supabase
+                  .from('products')
+                  .select('*')
+                  .or(categoryWords.map(word => `name.ilike.%${word}%,description.ilike.%${word}%`).join(','))
+                  .order('created_at', { ascending: false })
+                
+                if (broadSearchError) {
+                  console.error('Error in broad search:', broadSearchError)
+                } else {
+                  data = broadSearchData || []
+                  console.log('Products found by broad search:', data.length)
+                }
+                
+                // Final fallback: search for any product containing the category name anywhere
+                if (data.length === 0) {
+                  console.log('Final fallback: searching for any product containing category name...')
+                  
+                  const { data: finalSearchData, error: finalSearchError } = await supabase
+                    .from('products')
+                    .select('*')
+                    .or(`name.ilike.%${selectedCategoryFromURL}%,description.ilike.%${selectedCategoryFromURL}%,category.ilike.%${selectedCategoryFromURL}%`)
+                    .order('created_at', { ascending: false })
+                  
+                  if (finalSearchError) {
+                    console.error('Error in final search:', finalSearchError)
+                  } else {
+                    data = finalSearchData || []
+                    console.log('Products found by final fallback search:', data.length)
+                  }
+                }
+              }
+            }
+          } else {
+            // Show ALL products for Electronics page (not just Electronics category)
+            query = supabase
+              .from('products')
+              .select('*')
+              .order('created_at', { ascending: false })
+          }
         } else {
           query = query.eq('category', categoryName)
         }
 
-        // Add debug logging
-        console.log('Query being executed:', query)
-        console.log('Category being searched:', categoryName)
-        console.log('Slug being used:', params.slug)
+        // If we haven't set data yet, execute the query
+        if (data.length === 0) {
+          // Add debug logging
+          console.log('Query being executed:', query)
+          console.log('Category being searched:', categoryName)
+          console.log('Slug being used:', params.slug)
 
-        let { data, error } = await query
+          let { data: queryData, error } = await query
 
         if (error) {
           console.error('Error fetching products:', error)
           setLoading(false)
           return
+          }
+
+          data = queryData || []
         }
 
         console.log('Raw products data:', data)
+        
+        // Debug: Show unique categories found
+        if (data && data.length > 0) {
+          const uniqueCategories = Array.from(new Set(data.map((p: any) => p.category)))
+          console.log('Unique categories found in products:', uniqueCategories)
+          console.log('Sample products:', data.slice(0, 3).map((p: any) => ({ name: p.name, category: p.category })))
+        }
 
         // Transform data to match Product interface
         const transformedProducts = data?.map((product: any) => ({
@@ -182,7 +373,17 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
     fetchProducts()
 
     return () => clearTimeout(timeoutId)
-  }, [categoryName, params.slug])
+  }, [categoryName, params.slug, selectedCategoryFromURL])
+
+  // Add scroll event listener for scroll-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Get brands based on category
   const getBrands = (categorySlug: string) => {
@@ -217,9 +418,9 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
         { name: 'Smartphones' },
         { name: 'Laptops' },
         { name: 'Tablets' },
-        { name: 'Gaming' },
-        { name: 'Audio' },
+        { name: 'Headphones' },
         { name: 'Cameras' },
+        { name: 'Gaming' },
         { name: 'Smart Home' },
         { name: 'Wearables' },
         { name: 'Accessories' }
@@ -255,10 +456,10 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   const getRelatedCategories = (currentSlug: string) => {
     const categoryMap: { [key: string]: Array<{ name: string; slug: string }> } = {
       'electronics': [
-        { name: 'Mobile Phones', slug: 'mobile-phones' },
+        { name: 'Smartphones', slug: 'smartphones' },
         { name: 'Gaming', slug: 'gaming' },
         { name: 'Accessories', slug: 'accessories' },
-        { name: 'Home Appliances', slug: 'home-appliances' }
+        { name: 'Cameras', slug: 'cameras' }
       ],
       'fashion': [
         { name: 'Men\'s Clothing', slug: 'mens-clothing' },
@@ -359,14 +560,13 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
   const breadcrumbItems = getBreadcrumbItems()
 
   // Filter and sort products
-  const filteredProducts = products
+  const filteredProducts = (searchResults.length > 0 ? searchResults : products)
     .filter(product => {
       if (selectedCategories.length > 0) {
-        // Check if product matches any selected category
+        // Check if product's actual category matches any selected category
         const productMatchesCategory = selectedCategories.some((selectedCategory: string) => {
-          // Simple category matching based on product name/description
-          const productText = `${product.name} ${product.description}`.toLowerCase()
-          return productText.includes(selectedCategory.toLowerCase())
+          // Direct category field comparison (case-insensitive)
+          return product.category.toLowerCase() === selectedCategory.toLowerCase()
         })
         if (!productMatchesCategory) return false
       }
@@ -380,11 +580,11 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
         case 'price-high':
           return b.price - a.price
         case 'rating':
-          return b.rating - a.rating
+          return (b.rating || 0) - (a.rating || 0)
         case 'newest':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          return new Date(b.created_at || new Date()).getTime() - new Date(a.created_at || new Date()).getTime()
         default:
-          return b.reviewCount - a.reviewCount
+          return (b.reviewCount || 0) - (a.reviewCount || 0)
       }
     })
 
@@ -400,6 +600,45 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
         ? prev.filter(c => c !== category)
         : [...prev, category]
     )
+    // Reset to first page and scroll to top when filters change
+    setCurrentPage(1)
+    setTimeout(() => {
+      scrollToProductList()
+    }, 100)
+  }
+
+  // Smooth scroll to top of product list
+  const scrollToProductList = () => {
+    if (productListRef.current) {
+      setIsScrolling(true)
+      
+      // Add smooth-scroll class for better cross-browser support
+      document.documentElement.classList.add('smooth-scroll')
+      
+      // Get the element position and account for navbar height (64px = 4rem)
+      const elementTop = productListRef.current.offsetTop - 80
+      
+      // Smooth scroll to the element with offset
+      window.scrollTo({
+        top: elementTop,
+        behavior: 'smooth'
+      })
+      
+      // Remove the class and reset scrolling state after scrolling
+      setTimeout(() => {
+        document.documentElement.classList.remove('smooth-scroll')
+        setIsScrolling(false)
+      }, 1000)
+    }
+  }
+
+  // Handle page change with smooth scrolling
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // Scroll to top of product list after a brief delay to ensure state update
+    setTimeout(() => {
+      scrollToProductList()
+    }, 100)
   }
 
   if (loading) {
@@ -460,6 +699,22 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
             </div>
           </div>
         </div>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={() => {
+            window.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            })
+          }}
+          className="fixed bottom-6 right-6 z-50 bg-primary-red hover:bg-red-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl"
+          title="Scroll to top"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+      )}
       </div>
     )
   }
@@ -478,6 +733,23 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
                          {/* Breadcrumb */}
              <nav className="mb-4">
+               {/* Category Indicator */}
+               {selectedCategoryFromURL && selectedCategoryFromURL !== 'All' && (
+                 <div className="mb-3 flex items-center space-x-3">
+                   <div className="p-2 bg-primary-red/20 border border-primary-red/30 rounded-lg inline-block">
+                     <span className="text-primary-red font-medium text-sm">
+                       📱 Viewing: {selectedCategoryFromURL}
+                     </span>
+                   </div>
+                   <Link
+                     href="/category/electronics"
+                     className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-xs rounded-md transition-colors border border-white/30"
+                   >
+                     ✕ Clear Filter
+                   </Link>
+                 </div>
+               )}
+               
                <ol className="flex items-center space-x-2 text-xs sm:text-sm text-white/80 flex-wrap">
                  {breadcrumbItems.map((item, index) => (
                    <React.Fragment key={index}>
@@ -529,12 +801,21 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
               </div>
               
               <div className={`lg:block ${showFilters ? 'block' : 'hidden'}`}>
+
+
                 {/* Sort Options */}
                 <div className="mb-6">
                   <h4 className="font-medium text-gray-900 mb-3">Sort By</h4>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => {
+                      setSortBy(e.target.value)
+                      // Reset to first page and scroll to top when sort changes
+                      setCurrentPage(1)
+                      setTimeout(() => {
+                        scrollToProductList()
+                      }, 100)
+                    }}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-red focus:border-transparent"
                   >
                     <option value="popularity">Popularity</option>
@@ -566,6 +847,74 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                 {/* Price Range */}
                 <div className="mb-6">
                   <h4 className="font-medium text-gray-900 mb-3">Price Range</h4>
+                  <div className="space-y-4">
+                    {/* Custom Price Inputs */}
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 mb-1">Min Price</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="99999"
+                          value={priceRange[0]}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0
+                            // Ensure min price doesn't exceed max price
+                            if (value <= priceRange[1]) {
+                              setPriceRange([value, priceRange[1]])
+                              setCurrentPage(1)
+                              setTimeout(() => {
+                                scrollToProductList()
+                              }, 100)
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Validate and fix min price on blur
+                            const value = parseInt(e.target.value) || 0
+                            if (value < 0) {
+                              setPriceRange([0, priceRange[1]])
+                            } else if (value > priceRange[1]) {
+                              setPriceRange([priceRange[1], priceRange[1]])
+                            }
+                          }}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-red focus:border-transparent"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 mb-1">Max Price</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="99999"
+                          value={priceRange[1]}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 1000
+                            // Ensure max price is not less than min price
+                            if (value >= priceRange[0]) {
+                              setPriceRange([priceRange[0], value])
+                              setCurrentPage(1)
+                              setTimeout(() => {
+                                scrollToProductList()
+                              }, 100)
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Validate and fix max price on blur
+                            const value = parseInt(e.target.value) || 1000
+                            if (value < priceRange[0]) {
+                              setPriceRange([priceRange[0], priceRange[0] + 100])
+                            } else if (value > 99999) {
+                              setPriceRange([priceRange[0], 99999])
+                            }
+                          }}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-red focus:border-transparent"
+                          placeholder="1000+"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Price Range Slider */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">${priceRange[0]}</span>
@@ -574,11 +923,54 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                     <input
                       type="range"
                       min="0"
-                      max="1000"
+                        max="10000"
+                        step="100"
                       value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                      className="w-full"
-                    />
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value)
+                          const minValue = Math.min(value, priceRange[0])
+                          setPriceRange([minValue, value])
+                          setCurrentPage(1)
+                          setTimeout(() => {
+                            scrollToProductList()
+                          }, 100)
+                        }}
+                        className="w-full price-range-slider"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>$0</span>
+                        <span>$2,500</span>
+                        <span>$5,000</span>
+                        <span>$7,500</span>
+                        <span>$10,000+</span>
+                      </div>
+                    </div>
+                    
+                    {/* Quick Price Presets */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600">Quick Presets:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[100, 500, 1000, 2500, 5000, 10000].map((preset) => (
+                          <button
+                            key={preset}
+                            onClick={() => {
+                              setPriceRange([0, preset])
+                              setCurrentPage(1)
+                              setTimeout(() => {
+                                scrollToProductList()
+                              }, 100)
+                            }}
+                            className={`px-2 py-1 text-xs rounded-md transition-colors price-preset-button ${
+                              priceRange[1] === preset
+                                ? 'bg-primary-red text-white active'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            ${preset.toLocaleString()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -586,7 +978,12 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                 <button
                   onClick={() => {
                     setSelectedCategories([])
-                    setPriceRange([0, 1000])
+                    setPriceRange([0, 10000])
+                    // Reset to first page and scroll to top when filters are cleared
+                    setCurrentPage(1)
+                    setTimeout(() => {
+                      scrollToProductList()
+                    }, 100)
                   }}
                   className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-md transition-colors"
                 >
@@ -622,7 +1019,7 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600">
-                      {Math.max(...filteredProducts.map(p => p.rating), 0)}
+                      {Math.max(...filteredProducts.map(p => p.rating || 0), 0)}
                     </div>
                     <div className="text-sm text-gray-600">Top Rating</div>
                   </div>
@@ -644,13 +1041,25 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                 {/* View Mode Toggle */}
                 <div className="flex items-center bg-white rounded-lg shadow-sm p-1">
                   <button
-                    onClick={() => setViewMode('grid')}
+                    onClick={() => {
+                      setViewMode('grid')
+                      // Scroll to top when view mode changes
+                      setTimeout(() => {
+                        scrollToProductList()
+                      }, 100)
+                    }}
                     className={`p-2 rounded ${viewMode === 'grid' ? 'bg-primary-red text-white' : 'text-gray-600'}`}
                   >
                     <Grid3X3 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => setViewMode('list')}
+                    onClick={() => {
+                      setViewMode('list')
+                      // Scroll to top when view mode changes
+                      setTimeout(() => {
+                        scrollToProductList()
+                      }, 100)
+                    }}
                     className={`p-2 rounded ${viewMode === 'list' ? 'bg-primary-red text-white' : 'text-gray-600'}`}
                   >
                     <List className="w-4 h-4" />
@@ -660,12 +1069,35 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
             </div>
 
             {/* Product Grid */}
-            <div className={`grid gap-6 ${
+            <div 
+              ref={productListRef} 
+              className={`grid gap-6 transition-all duration-300 ${
               viewMode === 'grid' 
                 ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' 
                 : 'grid-cols-1'
-            }`}>
-              {currentProducts.map(product => (
+              } ${isScrolling ? 'opacity-90' : 'opacity-100'}`}
+            >
+              {currentProducts.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
+                  <p className="text-gray-600 mb-4">
+                    {searchResults.length > 0 
+                      ? 'No products match your current filters. Try adjusting your search criteria.'
+                      : 'No products found for your search. Try different keywords or browse all categories.'
+                    }
+                  </p>
+                  {searchResults.length > 0 && (
+                    <button
+                      onClick={() => clearResults()}
+                      className="bg-primary-red hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      Clear Search
+                    </button>
+                  )}
+                </div>
+              ) : (
+                currentProducts.map(product => (
                 <div key={product.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105 border border-gray-100">
                   <div className="relative">
                     <img
@@ -723,28 +1155,29 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                     {/* Add to Cart Button */}
                     <AddToCartButton
                       product={{
-                        id: product.id,
+                        id: product.id.toString(),
                         name: product.name,
-                        description: product.description,
+                        description: product.description || '',
                         price: product.price,
                         image_url: product.image_url,
                         category: product.category,
-                        seller_id: product.seller_id
+                        seller_id: product.seller_id || 'unknown-seller'
                       }}
                       className="w-full"
                       size="md"
                     />
                   </div>
                 </div>
-              ))}
+              ))
+            )}
             </div>
 
             {/* Pagination */}
-            <div className="flex justify-center mt-8">
-              <div className="flex items-center space-x-2">
+              <div className="flex justify-center mt-8">
+                <div className="flex items-center space-x-2">
                 {/* Show All Button */}
-                <button
-                  onClick={() => setCurrentPage(1)}
+                  <button
+                  onClick={() => handlePageChange(1)}
                   className={`px-3 py-2 rounded-md ${
                     currentPage === 1
                       ? 'bg-primary-red text-white'
@@ -756,50 +1189,66 @@ const CategoryPage = ({ params }: { params: { slug: string } }) => {
                 
                 {/* Previous Button */}
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  
                 {/* Page Numbers */}
                 {totalPages > 1 && (
                   <>
-                    {[...Array(totalPages)].map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentPage(index + 1)}
-                        className={`px-3 py-2 rounded-md ${
-                          currentPage === index + 1
-                            ? 'bg-primary-red text-white'
-                            : 'border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {index + 1}
-                      </button>
-                    ))}
+                  {[...Array(totalPages)].map((_, index) => (
+                    <button
+                      key={index}
+                        onClick={() => handlePageChange(index + 1)}
+                      className={`px-3 py-2 rounded-md ${
+                        currentPage === index + 1
+                          ? 'bg-primary-red text-white'
+                          : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
                   </>
                 )}
-                
+                  
                 {/* Next Button */}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                  <button
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 
                 {/* Page Info */}
                 <div className="ml-4 text-sm text-gray-600">
                   Page {currentPage} of {Math.max(1, totalPages)} • {filteredProducts.length} products
                 </div>
               </div>
-            </div>
           </div>
         </div>
       </div>
+      </div>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={() => {
+            window.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            })
+          }}
+          className="fixed bottom-6 right-6 z-50 bg-primary-red hover:bg-red-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl"
+          title="Scroll to top"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+      )}
     </div>
   )
 }

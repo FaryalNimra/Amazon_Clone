@@ -33,7 +33,7 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose }) => {
           
           {/* Sign Up Form */}
           <div className="relative">
-            <SignUpForm onClose={onClose} showCloseButton={false} />
+            <SignUpForm onClose={onClose} />
           </div>
         </div>
       </div>

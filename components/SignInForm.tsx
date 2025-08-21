@@ -10,6 +10,7 @@ import { useModal } from '@/contexts/ModalContext'
 import { supabase } from '@/lib/supabase'
 import Logo from './Logo'
 import AuthHero from './AuthHero'
+import ForgotPasswordModal from './ForgotPasswordModal'
 
 interface SignInFormProps {
   onClose?: () => void
@@ -26,6 +27,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
   const [emailVerificationRequired, setEmailVerificationRequired] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const [showUnverifiedEmailModal, setShowUnverifiedEmailModal] = useState(false)
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false)
   const { signIn, buyerSignIn } = useAuth()
   const { closeSellerSignInModal, closeSellerSignUpModal, openSignUpModal, openSellerSignUpModal, closeSignInModal } = useModal()
 
@@ -43,23 +45,19 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
 
     try {
       console.log('🔄 Attempting sign in for:', data.email)
-      
-      // Use buyerSignIn for both buyer and seller authentication
-      // The function will automatically detect the user type and redirect accordingly
-      console.log('🔄 SignInForm: Using buyerSignIn for authentication...')
       const result = await buyerSignIn(data.email, data.password)
-      
+
       if (result.error) {
         console.error('❌ SignInForm: Sign in failed:', result.error)
         setError(result.error)
         return
       }
-      
-      // Sign in successful
+
+      // ✅ Sign in successful
       console.log('✅ SignInForm: Sign in successful!')
       setSignInSuccess(true)
-      
-      // Get the actual user role from localStorage to show correct message
+
+      // Get role from localStorage
       const userData = localStorage.getItem('userData')
       if (userData) {
         try {
@@ -70,12 +68,16 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
           console.error('Error parsing user data:', e)
         }
       }
-      
-      console.log('🎉 Sign in successful! Redirecting...')
-      
-      // Success message will show, then redirect happens automatically
-      return
 
+      // 🔥 Close modal after successful login
+      if (isSellerForm) {
+        closeSellerSignInModal()
+      } else {
+        closeSignInModal()
+      }
+
+      console.log('🎉 Modal closed after successful sign in!')
+      return
     } catch (err) {
       console.error('❌ Unexpected sign in error:', err)
       setError('An unexpected error occurred. Please try again.')
@@ -86,7 +88,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
 
   const handleResendEmail = async () => {
     if (!userEmail) return
-    
+
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
@@ -122,11 +124,11 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
                 <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Mail className="w-8 h-8 text-white" />
                 </div>
-                
+
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   Please Verify Your Email
                 </h2>
-                
+
                 <p className="text-gray-600 mb-6">
                   Your email <strong>{userEmail}</strong> is not verified. Please check your inbox and verify your email before signing in.
                 </p>
@@ -185,7 +187,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
             </button>
           )}
           <Logo />
-          
+
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-primary-text mb-2">
               Welcome Back
@@ -213,7 +215,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
                     <strong>Sign in successful!</strong> {userRole === 'buyer' ? 'Redirecting to home page...' : userRole === 'seller' ? 'Redirecting to seller dashboard...' : 'Redirecting...'}
                   </span>
                 </div>
-                
+
                 {/* Manual Redirect Button */}
                 <div className="mt-3">
                   <button
@@ -291,9 +293,13 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
                 </label>
               </div>
               <div className="text-sm">
-                <a href="#" className="text-primary-red hover:underline transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPasswordModal(true)}
+                  className="text-primary-red hover:underline transition-colors"
+                >
                   Forgot your password?
-                </a>
+                </button>
               </div>
             </div>
 
@@ -351,6 +357,12 @@ const SignInForm: React.FC<SignInFormProps> = ({ onClose, showCloseButton = true
           </div>
         </div>
       </div>
+      
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+      />
     </div>
   )
 }

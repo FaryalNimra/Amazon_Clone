@@ -1,6 +1,10 @@
 
 -- COMPLETE DATABASE SCHEMA FOR ECOMMERCE WEBSITE (WITHOUT CART_ITEMS)
 -- =====================================================
+-- IMPORTANT: After running this script, you need to apply the password reset policies
+-- to fix the "Forgot Password" functionality. The password reset policies allow
+-- unauthenticated users to update their passwords during the reset process.
+-- =====================================================
 
 -- STEP 1: DROP EXISTING TABLES (IF ANY)
 -- =====================================================
@@ -138,6 +142,21 @@ DROP POLICY IF EXISTS "Allow seller authentication" ON sellers;
 CREATE POLICY "Allow seller authentication" 
 ON sellers FOR SELECT 
 USING (true);
+
+-- STEP 10.5: CREATE PASSWORD RESET POLICIES
+-- =====================================================
+-- Allow password updates for unauthenticated users during password reset
+DROP POLICY IF EXISTS "Allow password reset for buyers" ON buyers;
+CREATE POLICY "Allow password reset for buyers" 
+ON buyers FOR UPDATE 
+USING (true)
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow password reset for sellers" ON sellers;
+CREATE POLICY "Allow password reset for sellers" 
+ON sellers FOR UPDATE 
+USING (true)
+WITH CHECK (true);
 
 -- STEP 11: CREATE RLS POLICIES FOR PRODUCTS TABLE
 -- =====================================================

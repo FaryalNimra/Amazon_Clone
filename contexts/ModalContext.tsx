@@ -1,12 +1,14 @@
 'use client'
 
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { useBodyScroll } from '@/hooks/useBodyScroll'
 
 interface ModalContextType {
   isSignUpModalOpen: boolean
   isSignInModalOpen: boolean
   isSellerSignUpModalOpen: boolean
   isSellerSignInModalOpen: boolean
+  isAnyModalOpen: boolean
   openSignUpModal: () => void
   openSignInModal: () => void
   openSellerSignUpModal: () => void
@@ -15,6 +17,7 @@ interface ModalContextType {
   closeSignInModal: () => void
   closeSellerSignUpModal: () => void
   closeSellerSignInModal: () => void
+  closeAllModals: () => void
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined)
@@ -36,6 +39,12 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false)
   const [isSellerSignUpModalOpen, setIsSellerSignUpModalOpen] = useState(false)
   const [isSellerSignInModalOpen, setIsSellerSignInModalOpen] = useState(false)
+
+  // Check if any modal is open
+  const isAnyModalOpen = isSignUpModalOpen || isSignInModalOpen || isSellerSignUpModalOpen || isSellerSignInModalOpen
+
+  // Use the body scroll hook to disable/enable scrolling
+  useBodyScroll(isAnyModalOpen)
 
   const openSignUpModal = () => {
     setIsSignUpModalOpen(true)
@@ -69,12 +78,21 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
     setIsSellerSignInModalOpen(false)
   }
 
+  // Utility function to close all modals
+  const closeAllModals = () => {
+    setIsSignUpModalOpen(false)
+    setIsSignInModalOpen(false)
+    setIsSellerSignUpModalOpen(false)
+    setIsSellerSignInModalOpen(false)
+  }
+
   return (
     <ModalContext.Provider value={{ 
       isSignUpModalOpen, 
       isSignInModalOpen,
       isSellerSignUpModalOpen,
       isSellerSignInModalOpen,
+      isAnyModalOpen,
       openSignUpModal, 
       openSignInModal,
       openSellerSignUpModal,
@@ -82,7 +100,8 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
       closeSignUpModal, 
       closeSignInModal,
       closeSellerSignUpModal,
-      closeSellerSignInModal
+      closeSellerSignInModal,
+      closeAllModals
     }}>
       {children}
     </ModalContext.Provider>

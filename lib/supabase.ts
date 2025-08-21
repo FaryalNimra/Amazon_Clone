@@ -263,4 +263,165 @@ export const verifyDatabaseSchema = async () => {
     console.error('❌ Schema verification error:', err)
     return { success: false, error: err.message }
   }
+}
+
+// Function to check if email exists for buyers or sellers
+export const checkEmailExists = async (email: string): Promise<{
+  exists: boolean
+  userType: 'buyer' | 'seller' | null
+  userId: string | null
+  name: string | null
+  error?: string
+}> => {
+  try {
+    console.log('🔍 Checking if email exists:', email)
+    
+    // Check buyers table
+    const { data: buyerData, error: buyerError } = await supabase
+      .from('buyers')
+      .select('id, name, email')
+      .eq('email', email)
+      .single()
+    
+    if (buyerData && !buyerError) {
+      console.log('✅ Email found in buyers table')
+      return { exists: true, userType: 'buyer', userId: buyerData.id, name: buyerData.name }
+    }
+    
+    // Check sellers table
+    const { data: sellerData, error: sellerError } = await supabase
+      .from('sellers')
+      .select('id, name, email')
+      .eq('email', email)
+      .single()
+    
+    if (sellerData && !sellerError) {
+      console.log('✅ Email found in sellers table')
+      return { exists: true, userType: 'seller', userId: sellerData.id, name: sellerData.name }
+    }
+    
+    console.log('❌ Email not found in any table')
+    return { exists: false, userType: null, userId: null, name: null }
+    
+  } catch (err: any) {
+    console.error('❌ Error checking email existence:', err)
+    return { exists: false, userType: null, userId: null, name: null, error: err.message }
+  }
+} 
+
+// Function to update password for buyers or sellers
+export const updatePassword = async (
+  email: string,
+  userType: 'buyer' | 'seller',
+  newPassword: string
+): Promise<{
+  success: boolean
+  error?: string
+}> => {
+  try {
+    console.log(`🔐 Updating password for ${userType}:`, email)
+    
+    // Hash the new password (you might want to use a proper hashing library)
+    // For now, we'll use a simple approach - in production, use bcrypt or similar
+    const hashedPassword = newPassword // TODO: Implement proper hashing
+    
+    if (userType === 'buyer') {
+      console.log('🔄 Attempting to update buyer password...')
+      
+      // First, let's check if the buyer exists and get their ID
+      const { data: buyerData, error: buyerCheckError } = await supabase
+        .from('buyers')
+        .select('id, email')
+        .eq('email', email)
+        .single()
+      
+      if (buyerCheckError) {
+        console.error('❌ Error checking buyer existence:', buyerCheckError)
+        return { success: false, error: `Buyer not found: ${buyerCheckError.message}` }
+      }
+      
+      if (!buyerData) {
+        console.error('❌ Buyer not found with email:', email)
+        return { success: false, error: 'Buyer not found with this email' }
+      }
+      
+      console.log('✅ Buyer found, updating password for ID:', buyerData.id)
+      
+      // Now update the password
+      const { data: updateData, error: updateError } = await supabase
+        .from('buyers')
+        .update({ 
+          password: hashedPassword,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', buyerData.id)
+        .select('id, email')
+      
+      if (updateError) {
+        console.error('❌ Error updating buyer password:', updateError)
+        console.error('❌ Error details:', {
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint
+        })
+        return { success: false, error: `Failed to update password: ${updateError.message}` }
+      }
+      
+      console.log('✅ Buyer password updated successfully:', updateData)
+      
+    } else if (userType === 'seller') {
+      console.log('🔄 Attempting to update seller password...')
+      
+      // First, let's check if the seller exists and get their ID
+      const { data: sellerData, error: sellerCheckError } = await supabase
+        .from('sellers')
+        .select('id, email')
+        .eq('email', email)
+        .single()
+      
+      if (sellerCheckError) {
+        console.error('❌ Error checking seller existence:', sellerCheckError)
+        return { success: false, error: `Seller not found: ${sellerCheckError.message}` }
+      }
+      
+      if (!sellerData) {
+        console.error('❌ Seller not found with email:', email)
+        return { success: false, error: 'Seller not found with this email' }
+      }
+      
+      console.log('✅ Seller found, updating password for ID:', sellerData.id)
+      
+      // Now update the password
+      const { data: updateData, error: updateError } = await supabase
+        .from('sellers')
+        .update({ 
+          password: hashedPassword,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sellerData.id)
+        .select('id, email')
+      
+      if (updateError) {
+        console.error('❌ Error updating seller password:', updateError)
+        console.error('❌ Error details:', {
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint
+        })
+        return { success: false, error: `Failed to update password: ${updateError.message}` }
+      }
+      
+      console.log('✅ Seller password updated successfully:', updateData)
+    }
+    
+    console.log('✅ Password updated successfully for', userType, email)
+    return { success: true }
+    
+  } catch (err: any) {
+    console.error('❌ Error updating password:', err)
+    console.error('❌ Error stack:', err.stack)
+    return { success: false, error: err.message }
+  }
 } 

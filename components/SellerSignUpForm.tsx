@@ -28,10 +28,22 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    watch,
+    formState: { errors, isValid, isDirty },
   } = useForm<SellerSignUpFormData>({
     resolver: zodResolver(sellerSignUpSchema),
+    mode: 'onChange',
   })
+
+  // Watch form fields for real-time validation
+  const watchedFields = watch()
+  const isFormValid = isValid && isDirty
+
+  // Watch GST number for real-time validation
+  const gstNumber = watch('gstNumber')
+  const phoneNumber = watch('phone')
+
+
 
   const checkEmailExists = async (email: string): Promise<boolean> => {
     try {
@@ -256,16 +268,6 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
                     Sign In Now
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </button>
-
-                  <button
-                    onClick={() => {
-                      setShowAccountCreatedModal(false)
-                      if (onClose) onClose()
-                    }}
-                    className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors font-medium"
-                  >
-                    Continue to Dashboard
-                  </button>
                 </div>
               </div>
             </div>
@@ -301,6 +303,47 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Form Validation Summary */}
+            {!isFormValid && isDirty && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
+                  <div className="text-yellow-800 text-sm">
+                    <p className="font-medium mb-2">Please complete the following fields:</p>
+                    <ul className="space-y-1 text-xs">
+                      {!watchedFields.name || watchedFields.name.length < 2 && (
+                        <li>• Full Name (at least 2 characters)</li>
+                      )}
+                      {!watchedFields.storeName || watchedFields.storeName.length < 2 && (
+                        <li>• Store Name (at least 2 characters)</li>
+                      )}
+                      {!watchedFields.gstNumber || watchedFields.gstNumber.length !== 15 && (
+                        <li>• GST Number (exactly 15 characters)</li>
+                      )}
+                      {!watchedFields.businessType && (
+                        <li>• Business Type (must be selected)</li>
+                      )}
+                      {!watchedFields.businessAddress || watchedFields.businessAddress.length < 10 && (
+                        <li>• Business Address (at least 10 characters)</li>
+                      )}
+                      {!watchedFields.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(watchedFields.email) && (
+                        <li>• Valid email address</li>
+                      )}
+                      {!watchedFields.phone || !/^(\+92|0)?[3-9]\d{9}$/.test(watchedFields.phone.replace(/\D/g, '')) && (
+                        <li>• Valid Pakistani phone number</li>
+                      )}
+                      {!watchedFields.password || watchedFields.password.length < 8 && (
+                        <li>• Password (at least 8 characters with uppercase, lowercase, and number)</li>
+                      )}
+                      {!watchedFields.confirmPassword || watchedFields.password !== watchedFields.confirmPassword && (
+                        <li>• Confirm password (must match)</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center">
                 <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
@@ -321,61 +364,126 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
 
             <div className="space-y-2">
               <label htmlFor="name" className="block text-sm font-semibold text-primary-text">
-                Full Name
+                Full Name *
               </label>
-              <input
-                {...register('name')}
-                type="text"
-                id="name"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                placeholder="Enter your full name"
-              />
+              <div className="relative">
+                <input
+                  {...register('name')}
+                  type="text"
+                  id="name"
+                  className={`auth-input transition-all duration-200 ${
+                    errors.name 
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                      : watchedFields.name && watchedFields.name.length >= 2
+                      ? 'border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                      : 'focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  }`}
+                  placeholder="Enter your full name"
+                />
+                {watchedFields.name && watchedFields.name.length >= 2 && !errors.name && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                )}
+              </div>
               {errors.name && (
-                <p className="text-red-600 text-sm">{errors.name.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.name.message}
+                </p>
               )}
+
             </div>
 
             <div className="space-y-2">
               <label htmlFor="storeName" className="block text-sm font-semibold text-primary-text">
-                Store Name
+                Store Name *
               </label>
-              <input
-                {...register('storeName')}
-                type="text"
-                id="storeName"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                placeholder="Enter your store name"
-              />
+              <div className="relative">
+                <input
+                  {...register('storeName')}
+                  type="text"
+                  id="storeName"
+                  className={`auth-input transition-all duration-200 ${
+                    errors.storeName 
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                      : watchedFields.storeName && watchedFields.storeName.length >= 2
+                      ? 'border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                      : 'focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  }`}
+                  placeholder="Enter your store name"
+                />
+                {watchedFields.storeName && watchedFields.storeName.length >= 2 && !errors.storeName && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                )}
+              </div>
               {errors.storeName && (
-                <p className="text-red-600 text-sm">{errors.storeName.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.storeName.message}
+                </p>
               )}
+
             </div>
 
             <div className="space-y-2">
               <label htmlFor="gstNumber" className="block text-sm font-semibold text-primary-text">
                 GST Number
               </label>
-              <input
-                {...register('gstNumber')}
-                type="text"
-                id="gstNumber"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                placeholder="Enter your 15-digit GST number"
-              />
+              <div className="relative">
+                <input
+                  {...register('gstNumber')}
+                  type="text"
+                  id="gstNumber"
+                  maxLength={15}
+                  className={`auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-16 ${
+                    errors.gstNumber ? 'gst-input-invalid' : 
+                    (gstNumber?.length === 15 ? 'gst-input-valid' : '')
+                  }`}
+                  placeholder="Enter your 15-character GST number"
+                  onChange={(e) => {
+                    // Only allow numbers and uppercase letters
+                    const value = e.target.value.replace(/[^0-9A-Z]/gi, '').toUpperCase()
+                    e.target.value = value
+                  }}
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                  <span className={`text-xs font-medium gst-counter ${
+                    (gstNumber?.length || 0) === 15 
+                      ? 'valid' 
+                      : (gstNumber?.length || 0) > 0
+                      ? 'invalid'
+                      : 'neutral'
+                  }`}>
+                    {gstNumber?.length || 0}/15
+                  </span>
+                  {(gstNumber?.length || 0) === 15 && (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  )}
+                </div>
+              </div>
               {errors.gstNumber && (
-                <p className="text-red-600 text-sm">{errors.gstNumber.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.gstNumber.message}
+                </p>
               )}
+              <p className="text-xs text-gray-500">
+                GST number must be exactly 15 characters (e.g., 22AAAAA0000A1Z5)
+              </p>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="businessType" className="block text-sm font-semibold text-primary-text">
                 Business Type
               </label>
-              <select
-                {...register('businessType')}
-                id="businessType"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              >
+                                <select
+                    {...register('businessType')}
+                    id="businessType"
+                    className="auth-input focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                  >
                 <option value="">Select business type</option>
                 <option value="individual">Individual</option>
                 <option value="partnership">Partnership</option>
@@ -391,62 +499,129 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
 
             <div className="space-y-2">
               <label htmlFor="businessAddress" className="block text-sm font-semibold text-primary-text">
-                Business Address
+                Business Address *
               </label>
-              <textarea
-                {...register('businessAddress')}
-                id="businessAddress"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
-                rows={3}
-                placeholder="Enter your complete business address"
-              />
+              <div className="relative">
+                <textarea
+                  {...register('businessAddress')}
+                  id="businessAddress"
+                  className={`auth-input transition-all duration-200 resize-none ${
+                    errors.businessAddress 
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                      : watchedFields.businessAddress && watchedFields.businessAddress.length >= 10
+                      ? 'border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                      : 'focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  }`}
+                  rows={3}
+                  placeholder="Enter your complete business address"
+                />
+                {watchedFields.businessAddress && watchedFields.businessAddress.length >= 10 && !errors.businessAddress && (
+                  <div className="absolute right-3 top-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                )}
+              </div>
               {errors.businessAddress && (
-                <p className="text-red-600 text-sm">{errors.businessAddress.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.businessAddress.message}
+                </p>
               )}
+
             </div>
 
             <div className="space-y-2">
               <label htmlFor="email" className="block text-sm font-semibold text-primary-text">
-                Email
+                Email *
               </label>
-              <input
-                {...register('email')}
-                type="email"
-                id="email"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                placeholder="Enter your email"
-              />
+              <div className="relative">
+                <input
+                  {...register('email')}
+                  type="email"
+                  id="email"
+                  className={`auth-input transition-all duration-200 ${
+                    errors.email 
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                      : watchedFields.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(watchedFields.email)
+                      ? 'border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                      : 'focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  }`}
+                  placeholder="Enter your email"
+                />
+                {watchedFields.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(watchedFields.email) && !errors.email && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                )}
+              </div>
               {errors.email && (
-                <p className="text-red-600 text-sm">{errors.email.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.email.message}
+                </p>
               )}
+
             </div>
 
             <div className="space-y-2">
               <label htmlFor="phone" className="block text-sm font-semibold text-primary-text">
                 Phone Number
               </label>
-              <input
-                {...register('phone')}
-                type="tel"
-                id="phone"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                placeholder="Enter your phone number"
-              />
+              <div className="relative">
+                <input
+                  {...register('phone')}
+                  type="tel"
+                  id="phone"
+                  maxLength={15}
+                  className={`auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 pr-16 ${
+                    errors.phone ? 'phone-input-invalid' : 
+                    (phoneNumber && (phoneNumber.replace(/\D/g, '').length === 11 || phoneNumber.replace(/\D/g, '').length === 10) ? 'phone-input-valid' : '')
+                  }`}
+                  placeholder="Enter your phone number"
+
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                  <span className={`text-xs font-medium phone-counter ${
+                    phoneNumber && (phoneNumber.replace(/\D/g, '').length === 11 || phoneNumber.replace(/\D/g, '').length === 10) 
+                      ? 'valid' 
+                      : phoneNumber && phoneNumber.replace(/\D/g, '').length > 0
+                      ? 'invalid'
+                      : 'neutral'
+                  }`}>
+                    {phoneNumber ? phoneNumber.replace(/\D/g, '').length : 0}/11
+                  </span>
+                  {phoneNumber && (phoneNumber.replace(/\D/g, '').length === 11 || phoneNumber.replace(/\D/g, '').length === 10) && (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  )}
+                </div>
+              </div>
               {errors.phone && (
-                <p className="text-red-600 text-sm">{errors.phone.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.phone.message}
+                </p>
               )}
+              <p className="text-xs text-gray-500">
+                Enter a valid Pakistani phone number (e.g., 03001234567 or +92 300 1234567)
+              </p>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="password" className="block text-sm font-semibold text-primary-text">
-                Password
+                Password *
               </label>
               <div className="relative">
                 <input
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
-                  className="auth-input pr-12 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className={`auth-input pr-12 transition-all duration-200 ${
+                    errors.password 
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                      : watchedFields.password && watchedFields.password.length >= 8 && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(watchedFields.password)
+                      ? 'border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                      : 'focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  }`}
                   placeholder="Create a strong password"
                 />
                 <button
@@ -461,30 +636,78 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
                   )}
                 </button>
               </div>
+              
+              {/* Password Strength Indicator */}
+              {watchedFields.password && (
+                <div className="space-y-2">
+                  <div className="flex space-x-1">
+                    {[
+                      { test: watchedFields.password.length >= 8, label: '8+ chars' },
+                      { test: /[a-z]/.test(watchedFields.password), label: 'lowercase' },
+                      { test: /[A-Z]/.test(watchedFields.password), label: 'uppercase' },
+                      { test: /\d/.test(watchedFields.password), label: 'number' }
+                    ].map((requirement, index) => (
+                      <span
+                        key={index}
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          requirement.test
+                            ? 'bg-green-100 text-green-700 border border-green-200'
+                            : 'bg-gray-100 text-gray-500 border border-gray-200'
+                        }`}
+                      >
+                        {requirement.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {errors.password && (
-                <p className="text-red-600 text-sm">{errors.password.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="block text-sm font-semibold text-primary-text">
-                Confirm Password
+                Confirm Password *
               </label>
-              <input
-                {...register('confirmPassword')}
-                type="password"
-                id="confirmPassword"
-                className="auth-input focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                placeholder="Confirm your password"
-              />
+              <div className="relative">
+                <input
+                  {...register('confirmPassword')}
+                  type="password"
+                  id="confirmPassword"
+                  className={`auth-input transition-all duration-200 ${
+                    errors.confirmPassword 
+                      ? 'border-red-500 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                      : watchedFields.confirmPassword && watchedFields.password === watchedFields.confirmPassword
+                      ? 'border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                      : 'focus:ring-2 focus:ring-red-500 focus:border-red-500'
+                  }`}
+                  placeholder="Confirm your password"
+                />
+                {watchedFields.confirmPassword && watchedFields.password === watchedFields.confirmPassword && !errors.confirmPassword && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  </div>
+                )}
+              </div>
               {errors.confirmPassword && (
-                <p className="text-red-600 text-sm">{errors.confirmPassword.message}</p>
+                <p className="text-red-600 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.confirmPassword.message}
+                </p>
               )}
+
             </div>
+
+
 
             <button
               type="submit"
-              disabled={isLoading || signUpSuccess}
+              disabled={isLoading || signUpSuccess || !isFormValid}
               className="auth-button w-full py-4 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 font-semibold text-lg"
             >
               {isLoading ? (
@@ -508,7 +731,7 @@ const SellerSignUpForm: React.FC<SellerSignUpFormProps> = ({ onClose, showCloseB
               <p className="text-gray-600 mb-4">Already have an account?</p>
               <button
                 onClick={openSignInModal}
-                className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-colors"
+                className="text-primary-red hover:text-red-600 font-semibold hover:underline transition-colors"
               >
                 Sign in instead
               </button>
