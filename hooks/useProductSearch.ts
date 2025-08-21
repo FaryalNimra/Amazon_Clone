@@ -117,7 +117,7 @@ export const useProductSearch = (): UseProductSearchReturn => {
         for (const catVariation of categoryVariations) {
           const { data: variationData, error: variationError } = await supabase
             .from('products')
-            .select('id, name, price, image_url, category, description, rating, review_count, created_at, discount, brand, in_stock, original_price, stock, seller_id')
+            .select('id, name, price, image_url, category, description, stock, seller_id, created_at')
             .eq('category', catVariation)
             .ilike('name', `%${query}%`)
             .limit(20)
@@ -148,7 +148,7 @@ export const useProductSearch = (): UseProductSearchReturn => {
           if (orConditions) {
             const { data: keywordData, error: keywordError } = await supabase
               .from('products')
-              .select('id, name, price, image_url, category, description, rating, review_count, created_at, discount, brand, in_stock, original_price, stock, seller_id')
+              .select('id, name, price, image_url, category, description, stock, seller_id, created_at')
               .or(orConditions)
               .limit(20)
             
@@ -166,7 +166,7 @@ export const useProductSearch = (): UseProductSearchReturn => {
         
         const { data: generalData, error: generalError } = await supabase
           .from('products')
-          .select('id, name, price, image_url, category, description, rating, review_count, created_at, discount, brand, in_stock, original_price, stock, seller_id')
+          .select('id, name, price, image_url, category, description, stock, seller_id, created_at')
           .or(`name.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
           .limit(20)
         
@@ -193,13 +193,13 @@ export const useProductSearch = (): UseProductSearchReturn => {
         image_url: product.image_url,
         category: product.category,
         description: product.description,
-        rating: product.rating || 4.0,
-        reviewCount: product.review_count || 0,
+        rating: 4.0, // Default rating since field doesn't exist in DB
+        reviewCount: 0, // Default review count since field doesn't exist in DB
         created_at: product.created_at || new Date().toISOString(),
-        discount: product.discount || 0,
-        brand: product.brand || product.category || 'Unknown',
-        inStock: product.in_stock !== false,
-        originalPrice: product.original_price,
+        discount: 0, // Default discount since field doesn't exist in DB
+        brand: product.category || 'Unknown', // Use category as brand since brand field doesn't exist
+        inStock: (product.stock || 0) > 0, // Derive from stock count
+        originalPrice: product.price, // Use current price as original price
         stock: product.stock || 0,
         seller_id: product.seller_id || 'unknown-seller'
       }))
